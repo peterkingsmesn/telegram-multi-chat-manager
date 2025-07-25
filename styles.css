@@ -1,0 +1,1570 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    width: 1000px;
+    margin: 0 auto;
+    background-color: #fff;
+    min-height: 100vh;
+}
+
+header {
+    width: 100%;
+    height: 60px;
+    background-color: #1a73e8;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+h1 {
+    font-size: 22px;
+    font-weight: 600;
+    color: white;
+}
+
+.api-status {
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 10px 20px;
+    border-radius: 4px;
+    color: white;
+}
+
+.api-count {
+    font-weight: 500;
+}
+
+#activeApiCount {
+    color: #4caf50;
+    font-weight: 700;
+}
+
+.main-container {
+    display: flex;
+    gap: 15px;
+    padding: 15px;
+    background-color: #f5f5f5;
+    min-height: calc(100vh - 60px);
+}
+
+.left-container {
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: calc(100vh - 90px);
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.right-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* 섹션 스타일 */
+section {
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    padding: 20px;
+}
+
+h2 {
+    color: #333;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+/* 전문가 섹션 */
+.expert-section {
+    width: 100%;
+    flex: 1;
+}
+
+.expert-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.expert-controls button {
+    flex: 1;
+    padding: 8px 20px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn-add-expert-api {
+    background-color: #4caf50;
+    color: white;
+}
+
+.btn-broadcast {
+    background-color: #2196f3;
+    color: white;
+}
+
+/* 채팅방 카드 */
+.chat-rooms {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.room-card {
+    border: 1px solid #ddd;
+    padding: 15px;
+    background-color: #f9f9f9;
+    height: fit-content;
+}
+
+.room-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.room-header h3 {
+    font-size: 16px;
+    color: #333;
+}
+
+.room-status {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.room-status.active {
+    background-color: #4caf50;
+    color: white;
+}
+
+.room-status.inactive {
+    background-color: #ff9800;
+    color: white;
+}
+
+.room-info p {
+    margin: 5px 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.room-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.room-actions button {
+    flex: 1;
+    padding: 6px 12px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-test {
+    background-color: #ff9800;
+    color: white;
+}
+
+.btn-remove {
+    background-color: #f44336;
+    color: white;
+}
+
+/* 화력별 섹션 */
+.firepower-section {
+    width: 100%;
+    flex: 1;
+}
+
+.firepower-tabs {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+}
+
+.firepower-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+}
+
+.tab-btn {
+    width: 100%;
+    height: 35px;
+    padding: 0;
+    border: 1px solid #ddd;
+    background-color: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+}
+
+.tab-btn:hover {
+    background-color: #e8e8e8;
+}
+
+.tab-btn.active {
+    background-color: #1a73e8;
+    color: white;
+    border-color: #1a73e8;
+}
+
+/* 화력별 API 관리 */
+.api-section {
+    margin-bottom: 20px;
+}
+
+.api-section h4 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #555;
+}
+
+.firepower-api-list {
+    border: 1px solid #ddd;
+    padding: 10px;
+    min-height: 100px;
+    margin-bottom: 10px;
+    background-color: #f9f9f9;
+}
+
+.btn-add-firepower-api {
+    padding: 8px 20px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.group-section h4 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #555;
+}
+
+.api-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.api-slot {
+    width: 100%;
+    height: 80px;
+    border: 1px dashed #ccc;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    background-color: #fafafa;
+}
+
+.api-slot.active {
+    border-color: #4caf50;
+    background-color: #e8f5e9;
+    border-style: solid;
+}
+
+.api-slot:hover {
+    border-color: #1a73e8;
+    background-color: #e8f0fe;
+}
+
+.api-slot h4 {
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.api-slot p {
+    font-size: 12px;
+    color: #666;
+}
+
+.btn-add-api {
+    width: 200px;
+    height: 45px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn-add-api:hover {
+    background-color: #45a049;
+}
+
+/* 모달 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    width: 500px;
+    background-color: white;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-content h3 {
+    font-size: 20px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.modal-content input {
+    width: 100%;
+    height: 45px;
+    padding: 0 15px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    font-size: 16px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.modal-actions button {
+    flex: 1;
+    height: 45px;
+    border: none;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+#saveApiBtn, #saveExpertApiBtn {
+    background-color: #4caf50;
+    color: white;
+}
+
+#cancelApiBtn, #cancelExpertApiBtn {
+    background-color: #f44336;
+    color: white;
+}
+
+/* 연결 관련 스타일 */
+.btn-connect-api {
+    width: 100%;
+    height: 45px;
+    background-color: #0088cc;
+    color: white;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    margin: 10px 0;
+}
+
+.btn-connect-api:hover {
+    background-color: #006699;
+}
+
+#verificationSection {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+}
+
+#verificationSection h4 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+#verifyCodeBtn {
+    width: 100%;
+    height: 40px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.connection-status {
+    margin: 15px 0;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.connection-status.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.connection-status.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.connection-status.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+#testConnectionBtn, #loadGroupsBtn {
+    width: 48%;
+    height: 40px;
+    border: none;
+    cursor: pointer;
+    margin: 5px 1%;
+    font-size: 14px;
+}
+
+#testConnectionBtn {
+    background-color: #17a2b8;
+    color: white;
+}
+
+#loadGroupsBtn {
+    background-color: #6c757d;
+    color: white;
+}
+
+
+
+/* 화력별 선택된 그룹 표시 */
+.firepower-groups {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.selected-group-item {
+    padding: 8px 12px;
+    margin-bottom: 5px;
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #495057;
+    display: flex;
+    align-items: center;
+}
+
+.selected-group-item input[type="checkbox"] {
+    margin-right: 10px;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.selected-group-item label {
+    cursor: pointer;
+    flex: 1;
+    margin: 0;
+}
+
+/* 그룹 관리 섹션 */
+.group-management {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.group-management h4 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.btn-add-group {
+    padding: 8px 16px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.btn-add-group:hover {
+    background-color: #218838;
+}
+
+.firepower-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.firepower-info p {
+    margin: 0;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.btn-refresh-groups {
+    padding: 8px 16px;
+    background-color: #17a2b8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-refresh-groups:hover {
+    background-color: #138496;
+}
+
+/* 화력별 API 등록 버튼 */
+.btn-add-firepower-api {
+    padding: 10px 20px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.btn-add-firepower-api:hover {
+    background-color: #218838;
+}
+
+.firepower-controls {
+    margin-bottom: 15px;
+}
+
+.firepower-api-info {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.firepower-api-info p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #495057;
+}
+
+/* 화력별 버튼 그룹 */
+.firepower-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.firepower-buttons button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-change-api {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.btn-change-api:hover {
+    background-color: #e0a800;
+}
+
+.btn-delete-api {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-delete-api:hover {
+    background-color: #c82333;
+}
+
+/* 전송 중 오버레이 */
+.sending-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.sending-modal {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.sending-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.sending-modal p {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+}
+
+/* 전체 전송 모달 스타일 */
+.broadcast-options {
+    margin-bottom: 20px;
+}
+
+.group-list {
+    width: 100%;
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin-top: 10px;
+    background-color: #f9f9f9;
+}
+
+.group-list label {
+    display: block;
+    padding: 8px;
+    margin-bottom: 5px;
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    cursor: pointer;
+}
+
+.group-list label:hover {
+    background-color: #f0f8ff;
+}
+
+.group-list input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+/* 계정별 헤더 스타일 */
+.account-header {
+    background-color: #e3f2fd;
+    padding: 8px 12px;
+    margin: 8px 0 4px 0;
+    border-radius: 4px;
+    border-left: 4px solid #007bff;
+    border: none;
+}
+
+.account-header h4 {
+    margin: 0 0 4px 0;
+    color: #333;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.account-header label {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+/* 그룹 아이템 스타일 */
+.group-item {
+    padding-left: 16px;
+    font-size: 13px;
+    color: #555;
+    margin-left: 8px;
+}
+
+.group-item:hover {
+    background-color: #f0f8ff;
+}
+
+#broadcastMessage {
+    width: 100%;
+    height: 120px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    font-size: 16px;
+    resize: none;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.file-upload {
+    margin: 15px 0;
+}
+
+.file-upload input[type="file"] {
+    display: none;
+}
+
+.file-upload label {
+    display: inline-block;
+    padding: 10px 30px;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.file-upload label:hover {
+    background-color: #e0e0e0;
+}
+
+/* 그룹 선택 스타일 */
+#loadGroupsBtn {
+    width: 100%;
+    height: 45px;
+    margin: 10px 0;
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+#loadGroupsBtn:hover {
+    background-color: #1976d2;
+}
+
+.group-selection {
+    margin-top: 20px;
+}
+
+.group-selection h4 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.available-groups {
+    width: 100%;
+    height: 250px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    background-color: #f9f9f9;
+}
+
+.group-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    margin-bottom: 3px;
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    cursor: pointer;
+}
+
+.group-item:hover {
+    background-color: #f0f8ff;
+}
+
+.group-item input[type="checkbox"] {
+    margin-right: 8px;
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    cursor: pointer;
+}
+
+.group-item label {
+    flex: 1;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.group-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.group-name {
+    font-weight: 500;
+    margin-bottom: 2px;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 280px;
+}
+
+.group-members {
+    font-size: 11px;
+    color: #666;
+}
+
+/* 전문가 섹션 메시지 전송 */
+.expert-section .message-compose {
+    width: 100%;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-top: 15px;
+}
+
+.input-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.emoji-btn, .attach-btn {
+    width: 40px;
+    height: 40px;
+    border: 1px solid #ddd;
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.emoji-btn:hover, .attach-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.emoji-btn {
+    font-size: 20px;
+}
+
+.attach-btn {
+    color: #666;
+}
+
+.message-input-wrapper {
+    width: 100%;
+    background-color: white;
+    border: 1px solid #ddd;
+}
+
+.attached-files {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid #e0e0e0;
+    min-height: 0;
+}
+
+.attached-files:empty {
+    display: none;
+}
+
+.attached-files:not(:empty) {
+    min-height: 100px;
+}
+
+.file-preview {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #f0f0f0;
+}
+
+.file-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.file-preview .remove-file {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+#messageTextarea {
+    width: 100%;
+    height: 80px;
+    border: none;
+    padding: 10px;
+    font-size: 16px;
+    resize: none;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#messageTextarea:focus {
+    outline: none;
+}
+
+.send-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+}
+
+.selected-groups {
+    color: #666;
+    font-size: 14px;
+}
+
+.btn-send-message {
+    width: 150px;
+    height: 40px;
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-send-message:hover {
+    background-color: #1557b0;
+}
+
+/* 이모지 선택기 */
+.emoji-picker {
+    display: none;
+    position: absolute;
+    background-color: white;
+    border: 1px solid #ddd;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 10px;
+    width: 320px;
+    z-index: 1000;
+}
+
+.emoji-picker.active {
+    display: block;
+}
+
+.emoji-categories {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.emoji-category {
+    width: 40px;
+    height: 40px;
+    border: 1px solid #ddd;
+    background-color: #f0f0f0;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.emoji-category:hover,
+.emoji-category.active {
+    background-color: #1a73e8;
+    border-color: #1a73e8;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 5px;
+    height: 200px;
+    overflow-y: auto;
+}
+
+.emoji-item {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.emoji-item:hover {
+    background-color: #f0f0f0;
+}
+
+/* 화력별 컨텐츠 */
+.firepower-content {
+    width: 100%;
+}
+
+.firepower-main {
+    width: 100%;
+}
+
+.firepower-groups h3 {
+    font-size: 18px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+#currentFirepower {
+    color: #1a73e8;
+    font-weight: 600;
+}
+
+.message-templates {
+    width: 100%;
+}
+
+.message-templates h2 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.template-item {
+    display: flex;
+    gap: 5px;
+    width: 100%;
+    position: relative;
+    align-items: center;
+}
+
+/* 전송 결과 표시 */
+.send-result {
+    position: absolute;
+    right: 50px;
+    font-size: 13px;
+    transition: opacity 0.3s ease;
+}
+
+.send-result .success {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.send-result .partial {
+    color: #ffc107;
+    font-weight: 500;
+}
+
+.send-result .error {
+    color: #dc3545;
+    font-weight: 500;
+}
+
+/* 화력별 에러 표시 */
+.firepower-error {
+    text-align: center;
+    padding: 15px;
+    color: #dc3545;
+    font-size: 14px;
+    transition: opacity 0.3s ease;
+}
+
+.firepower-error span {
+    font-weight: 500;
+}
+
+.template-input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    font-size: 12px;
+    background-color: #fff;
+}
+
+.template-send-btn {
+    padding: 6px 15px;
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.template-send-btn:hover {
+    background-color: #1557b0;
+}
+
+.template-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+
+/* 클립보드 섹션 */
+.clipboard-section {
+    width: 100%;
+}
+
+.clipboard-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.clipboard-btn {
+    width: 100%;
+    height: 45px;
+    border: 1px solid #ddd;
+    background-color: #f9f9f9;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    transition: all 0.2s;
+}
+
+.clipboard-btn:hover {
+    border-color: #1a73e8;
+    background-color: #e8f0fe;
+}
+
+.clipboard-btn:active {
+    transform: scale(0.95);
+}
+
+.btn-number {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a73e8;
+}
+
+.btn-capacity {
+    font-size: 10px;
+    color: #666;
+    font-weight: 500;
+}
+
+/* 수익인증 모달 스타일 */
+#profitModal .modal-content {
+    width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.profit-upload-section,
+.profit-message-section,
+.profit-target-section {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.profit-target-section {
+    border-bottom: none;
+}
+
+.file-upload-area {
+    position: relative;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.file-upload-area:hover {
+    border-color: #1a73e8;
+    background-color: #f8f9ff;
+}
+
+.file-upload-area.dragover {
+    border-color: #1a73e8;
+    background-color: #e8f0fe;
+}
+
+#profitImageInput {
+    position: absolute;
+    left: -9999px;
+    opacity: 0;
+}
+
+.upload-label {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.upload-icon {
+    font-size: 48px;
+}
+
+.upload-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+}
+
+.upload-hint {
+    font-size: 12px;
+    color: #666;
+}
+
+.image-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.preview-item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #ddd;
+}
+
+.preview-image {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    display: block;
+}
+
+.remove-image {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(255, 0, 0, 0.8);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.remove-image:hover {
+    background: rgba(255, 0, 0, 1);
+}
+
+#profitMessage {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.target-selection {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.target-selection label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.target-selection label:hover {
+    background-color: #f5f5f5;
+}
+
+.target-selection input[type="radio"] {
+    margin: 0;
+}
+
+.selected-groups-display {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.group-checkbox-list {
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.group-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px;
+}
+
+.group-checkbox-item input[type="checkbox"] {
+    margin: 0;
+}
+
+.btn-send-profit {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-send-profit:hover {
+    background-color: #218838;
+}
+
+.btn-send-profit:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+}
+
+/* 등록된 화력 리스트 섹션 */
+.firepower-list-section {
+    width: 100%;
+    margin-top: 10px;
+    flex: 1;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+.firepower-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.firepower-list-section h2 {
+    color: #333;
+    margin: 0;
+    font-size: 14px;
+    border-bottom: 2px solid #1a73e8;
+    padding-bottom: 4px;
+    flex: 1;
+}
+
+.btn-refresh-all-groups {
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    margin-left: 8px;
+}
+
+.btn-refresh-all-groups:hover {
+    background-color: #1557b0;
+    transform: rotate(180deg);
+}
+
+.btn-refresh-all-groups:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.firepower-accounts {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 6px;
+    background-color: #f9f9f9;
+    min-height: 0;
+}
+
+.firepower-account-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 3px;
+    transition: all 0.2s;
+    cursor: pointer;
+    min-height: 40px;
+    flex-shrink: 0;
+}
+
+.firepower-account-item:hover {
+    border-color: #1a73e8;
+    box-shadow: 0 2px 4px rgba(26, 115, 232, 0.1);
+}
+
+.firepower-account-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.firepower-number {
+    background-color: #1a73e8;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.firepower-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.firepower-name {
+    font-weight: 500;
+    color: #333;
+    font-size: 11px;
+    line-height: 1.1;
+}
+
+.firepower-phone {
+    font-size: 9px;
+    color: #666;
+    font-family: monospace;
+    line-height: 1.1;
+}
+
+.firepower-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.firepower-groups-count {
+    background-color: #e8f0fe;
+    color: #1a73e8;
+    padding: 1px 4px;
+    border-radius: 8px;
+    font-size: 9px;
+    font-weight: 500;
+}
+
+.firepower-status-badge {
+    padding: 1px 4px;
+    border-radius: 8px;
+    font-size: 9px;
+    font-weight: 500;
+}
+
+.firepower-status-badge.active {
+    background-color: #e8f5e8;
+    color: #2e7d32;
+}
+
+.firepower-status-badge.inactive {
+    background-color: #ffeaa7;
+    color: #d68910;
+}
+
+.no-firepower-accounts {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 20px;
+}

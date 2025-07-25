@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>텔레그램 멀티 챗 매니저</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>텔레그램 멀티 챗 매니저</h1>
+            <div class="api-status">
+                <span class="api-count">활성 API: <span id="activeApiCount">0</span>/30</span>
+                <span class="proxy-status" id="proxyStatus" style="margin-left: 20px; display: none;">
+                    프록시: <span id="proxyInfo">-</span>
+                </span>
+            </div>
+        </header>
+
+        <div class="main-container">
+            <!-- 왼쪽 컨테이너 -->
+            <div class="left-container">
+                <!-- 수익인증 섹션 -->
+                <section class="clipboard-section">
+                    <h2>수익인증</h2>
+                    <div class="clipboard-buttons">
+                        <button class="clipboard-btn" data-capacity="10">
+                            <span class="btn-number">1</span>
+                            <span class="btn-capacity">10</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="20">
+                            <span class="btn-number">2</span>
+                            <span class="btn-capacity">20</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="30">
+                            <span class="btn-number">3</span>
+                            <span class="btn-capacity">30</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="50">
+                            <span class="btn-number">4</span>
+                            <span class="btn-capacity">50</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="70">
+                            <span class="btn-number">5</span>
+                            <span class="btn-capacity">70</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="100">
+                            <span class="btn-number">6</span>
+                            <span class="btn-capacity">100</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="150">
+                            <span class="btn-number">7</span>
+                            <span class="btn-capacity">150</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="200">
+                            <span class="btn-number">8</span>
+                            <span class="btn-capacity">200</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="250">
+                            <span class="btn-number">9</span>
+                            <span class="btn-capacity">250</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="300">
+                            <span class="btn-number">10</span>
+                            <span class="btn-capacity">300</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="400">
+                            <span class="btn-number">11</span>
+                            <span class="btn-capacity">400</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="500">
+                            <span class="btn-number">12</span>
+                            <span class="btn-capacity">500</span>
+                        </button>
+                    </div>
+                </section>
+                
+                <!-- 메시지 템플릿 섹션 -->
+                <section class="message-templates">
+                    <h2>메시지 템플릿</h2>
+                    <div class="template-list" id="templateList">
+                        <!-- 10개의 템플릿 입력칸이 생성됨 -->
+                    </div>
+                </section>
+                
+                <!-- 등록된 화력 리스트 섹션 -->
+                <section class="firepower-list-section">
+                    <div class="firepower-list-header">
+                        <h2>등록된 화력 목록</h2>
+                        <button class="btn-refresh-all-groups" id="refreshAllGroupsBtn" title="모든 계정의 그룹 목록 새로고침">🔄</button>
+                    </div>
+                    <div class="firepower-accounts" id="firepowerAccountsList">
+                        <!-- 등록된 화력 계정들이 표시됨 -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- 오른쪽 컨테이너 -->
+            <div class="right-container">
+                <!-- 전문가 섹션 -->
+                <section class="expert-section">
+                    <h2>전문가 섹션</h2>
+                <div class="expert-controls">
+                    <button class="btn-add-expert-api" id="addExpertApiBtn">API 등록하기</button>
+                    <button class="btn-broadcast" id="broadcastBtn">전체 전송</button>
+                </div>
+                <div class="chat-rooms" id="expertRooms">
+                    <!-- 등록된 API별 그룹 카드가 동적으로 생성됨 -->
+                </div>
+                
+                <!-- 메시지 전송 영역 -->
+                <div class="message-compose">
+                    <div class="input-toolbar">
+                        <button class="emoji-btn" title="이모지">😊</button>
+                        <label for="attachFile" class="attach-btn" title="파일 첨부">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                            </svg>
+                        </label>
+                        <input type="file" id="attachFile" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" style="display: none;">
+                    </div>
+                    <div class="message-input-wrapper">
+                        <div class="attached-files" id="attachedFiles">
+                            <!-- 첨부된 파일 미리보기 -->
+                        </div>
+                        <textarea 
+                            id="messageTextarea" 
+                            placeholder="메시지를 입력하세요... (이모지 사용 가능 😊, Ctrl+V로 이미지 붙여넣기)" 
+                            rows="4"
+                        ></textarea>
+                    </div>
+                    <div class="send-controls">
+                        <div class="selected-groups">
+                            <span>선택된 그룹: <span id="selectedGroupCount">0</span>개</span>
+                        </div>
+                        <button class="btn-send-message" id="sendMessageBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                            </svg>
+                            전송
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 화력별 섹션 -->
+            <section class="firepower-section">
+                <h2>화력별 그룹방</h2>
+                <div class="firepower-controls" style="text-align: center; margin-bottom: 15px;">
+                    <button class="btn-auto-setup" id="autoSetupBtn" style="background-color: #ff6b35; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">🚀 화력 1-8 자동 등록</button>
+                </div>
+                <div class="firepower-tabs">
+                    <div class="firepower-grid">
+                        <button class="tab-btn active" data-firepower="1">1</button>
+                        <button class="tab-btn" data-firepower="2">2</button>
+                        <button class="tab-btn" data-firepower="3">3</button>
+                        <button class="tab-btn" data-firepower="4">4</button>
+                        <button class="tab-btn" data-firepower="5">5</button>
+                        <button class="tab-btn" data-firepower="6">6</button>
+                        <button class="tab-btn" data-firepower="7">7</button>
+                        <button class="tab-btn" data-firepower="8">8</button>
+                        <button class="tab-btn" data-firepower="9">9</button>
+                        <button class="tab-btn" data-firepower="10">10</button>
+                        <button class="tab-btn" data-firepower="11">11</button>
+                        <button class="tab-btn" data-firepower="12">12</button>
+                        <button class="tab-btn" data-firepower="13">13</button>
+                        <button class="tab-btn" data-firepower="14">14</button>
+                        <button class="tab-btn" data-firepower="15">15</button>
+                        <button class="tab-btn" data-firepower="16">16</button>
+                        <button class="tab-btn" data-firepower="17">17</button>
+                        <button class="tab-btn" data-firepower="18">18</button>
+                        <button class="tab-btn" data-firepower="19">19</button>
+                        <button class="tab-btn" data-firepower="20">20</button>
+                        <button class="tab-btn" data-firepower="21">21</button>
+                        <button class="tab-btn" data-firepower="22">22</button>
+                        <button class="tab-btn" data-firepower="23">23</button>
+                        <button class="tab-btn" data-firepower="24">24</button>
+                        <button class="tab-btn" data-firepower="25">25</button>
+                        <button class="tab-btn" data-firepower="26">26</button>
+                        <button class="tab-btn" data-firepower="27">27</button>
+                        <button class="tab-btn" data-firepower="28">28</button>
+                        <button class="tab-btn" data-firepower="29">29</button>
+                        <button class="tab-btn" data-firepower="30">30</button>
+                    </div>
+                </div>
+                
+                <div class="firepower-content">
+                    <div class="firepower-main">
+                        <h3>화력 <span id="currentFirepower">1</span></h3>
+                        <div class="firepower-controls">
+                            <button class="btn-add-firepower-api" id="addFirepowerApiBtn">API 등록하기</button>
+                        </div>
+                        <div class="firepower-api-info" id="firepowerApiInfo" style="display: none;">
+                            <p>연결된 계정: <span id="firepowerAccountName">-</span></p>
+                            <p>선택된 그룹: <span id="firepowerGroupCount">0</span>개</p>
+                            <div class="firepower-buttons">
+                                <button class="btn-refresh-groups" id="refreshGroupsBtn">그룹 새로고침</button>
+                                <button class="btn-change-api" id="changeApiBtn">API 변경</button>
+                                <button class="btn-delete-api" id="deleteApiBtn">API 삭제</button>
+                            </div>
+                        </div>
+                        <div class="firepower-groups" id="firepowerGroups">
+                            <!-- 선택된 그룹 목록 표시 -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            </div>
+        </div>
+
+
+        <!-- 이모지 선택기 -->
+        <div class="emoji-picker" id="emojiPicker">
+            <div class="emoji-categories">
+                <button class="emoji-category active" data-category="smileys">😊</button>
+                <button class="emoji-category" data-category="animals">🐶</button>
+                <button class="emoji-category" data-category="food">🍕</button>
+                <button class="emoji-category" data-category="activities">⚽</button>
+                <button class="emoji-category" data-category="objects">💡</button>
+                <button class="emoji-category" data-category="symbols">❤️</button>
+            </div>
+            <div class="emoji-grid" id="emojiGrid">
+                <!-- 이모지들이 동적으로 로드됨 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- API 추가 모달 -->
+    <div class="modal" id="apiModal">
+        <div class="modal-content">
+            <h3>API 키 추가</h3>
+            <input type="text" id="apiKeyInput" placeholder="API 키를 입력하세요">
+            <input type="text" id="apiBotNameInput" placeholder="봇 이름을 입력하세요">
+            <div class="modal-actions">
+                <button id="saveApiBtn">저장</button>
+                <button id="cancelApiBtn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 전문가 API 추가 모달 -->
+    <div class="modal" id="expertApiModal">
+        <div class="modal-content">
+            <h3>텔레그램 User API 연결</h3>
+            <input type="tel" id="expertPhoneInput" placeholder="전화번호 (예: +821012345678)">
+            <button id="connectApiBtn" class="btn-connect-api">연결하기</button>
+            
+            <div id="verificationSection" style="display: none;">
+                <h4>인증 코드 입력</h4>
+                <input type="text" id="verificationCode" placeholder="텔레그램으로 받은 인증 코드">
+                <button id="verifyCodeBtn">확인</button>
+            </div>
+            
+            <div id="connectionStatus" class="connection-status"></div>
+            
+            <button id="testConnectionBtn" style="display: none;">연결 테스트</button>
+            <button id="loadGroupsBtn" style="display: none;">그룹 목록 불러오기</button>
+            
+            <div class="group-selection" style="display: none;">
+                <h4>그룹 선택</h4>
+                <div class="available-groups" id="availableGroups">
+                    <!-- API로 불러온 그룹 목록이 표시됨 -->
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="saveExpertApiBtn">저장</button>
+                <button id="cancelExpertApiBtn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 전체 전송 모달 -->
+    <div class="modal" id="broadcastModal">
+        <div class="modal-content">
+            <h3>전체 전송</h3>
+            <div class="broadcast-options">
+                <label>
+                    <input type="checkbox" id="selectAllGroups" checked> 모든 그룹 선택
+                </label>
+                <div class="group-list" id="groupList">
+                    <!-- 그룹 체크박스 목록이 동적으로 생성됨 -->
+                </div>
+            </div>
+            <textarea id="broadcastMessage" placeholder="전송할 메시지를 입력하세요..." rows="5"></textarea>
+            <div class="file-upload">
+                <input type="file" id="broadcastFile" accept="image/*">
+                <label for="broadcastFile">사진 첨부</label>
+            </div>
+            <div class="modal-actions">
+                <button id="sendBroadcastBtn">전송</button>
+                <button id="cancelBroadcastBtn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 수익인증 모달 -->
+    <div class="modal" id="profitModal">
+        <div class="modal-content">
+            <h3>수익인증 <span id="profitBtnNumber">1</span> (용량: <span id="profitCapacity">10</span>)</h3>
+            
+            <div class="profit-upload-section">
+                <h4>이미지 업로드</h4>
+                <div class="file-upload-area" id="profitFileUploadArea">
+                    <input type="file" id="profitImageInput" accept="image/*" multiple>
+                    <label for="profitImageInput" class="upload-label">
+                        <div class="upload-icon">📷</div>
+                        <div class="upload-text">이미지를 선택하거나 드래그하세요</div>
+                        <div class="upload-hint">PNG, JPG, GIF 파일 지원 (최대 10개)</div>
+                    </label>
+                </div>
+                
+                <div class="image-preview" id="profitImagePreview">
+                    <!-- 선택된 이미지 미리보기 -->
+                </div>
+            </div>
+            
+            <div class="profit-message-section">
+                <h4>메시지 (선택사항)</h4>
+                <textarea id="profitMessage" placeholder="수익인증과 함께 보낼 메시지를 입력하세요..." rows="3"></textarea>
+            </div>
+            
+            <div class="profit-target-section">
+                <h4>전송 대상</h4>
+                <div class="target-selection">
+                    <label>
+                        <input type="radio" name="profitTarget" value="all" checked>
+                        모든 활성 계정의 모든 그룹
+                    </label>
+                    <label>
+                        <input type="radio" name="profitTarget" value="expert">
+                        전문가만
+                    </label>
+                    <label>
+                        <input type="radio" name="profitTarget" value="firepower">
+                        화력만
+                    </label>
+                    <label>
+                        <input type="radio" name="profitTarget" value="select">
+                        선택된 그룹만
+                    </label>
+                </div>
+                
+                <div class="selected-groups-display" id="profitSelectedGroups" style="display: none;">
+                    <!-- 선택된 그룹 목록이 표시됨 -->
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="sendProfitBtn" class="btn-send-profit">📤 수익인증 전송</button>
+                <button id="cancelProfitBtn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

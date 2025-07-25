@@ -1,0 +1,9 @@
+@echo off
+echo 텔레그램 API 자동화 도구 시작...
+echo.
+echo 필요한 패키지 설치 중...
+pip install -r requirements.txt
+echo.
+echo 프로그램 시작...
+python telegram_api_automation.py
+pause
