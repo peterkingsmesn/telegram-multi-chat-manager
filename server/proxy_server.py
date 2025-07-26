@@ -41,56 +41,56 @@ PROXY_ACCOUNT_MAPPING = {
     '+821039655066': {
         'proxy_id': 'proxy1',
         'addr': '206.206.81.37',
-        'port': 12323,
+        'port': 12324,
         'username': '14a939d12d002',
         'password': 'e300685af2'
     },
     '+821077893897': {
         'proxy_id': 'proxy2',
         'addr': '206.206.81.128',
-        'port': 12323,
+        'port': 12324,
         'username': '14a939d12d002',
         'password': 'e300685af2'
     },
     '+821057334084': {
         'proxy_id': 'proxy3',
         'addr': '206.206.81.103',
-        'port': 12323,
+        'port': 12324,
         'username': '14a939d12d002',
         'password': 'e300685af2'
     },
     '+821080406011': {
         'proxy_id': 'proxy4',
         'addr': '206.206.81.47',
-        'port': 12323,
+        'port': 12324,
         'username': '14a939d12d002',
         'password': 'e300685af2'
     },
     '+821082019001': {
         'proxy_id': 'proxy5',
         'addr': '206.206.81.50',
-        'port': 12323,
+        'port': 12324,
         'username': '14a939d12d002',
         'password': 'e300685af2'
     },
     '+821039622144': {
         'proxy_id': 'proxy6',
         'addr': '88.209.253.67',
-        'port': 12323,
+        'port': 12324,
         'username': '14a939d12d002',
         'password': 'e300685af2'
     },
     '+821081724416': {
         'proxy_id': 'proxy7',
         'addr': '88.209.253.53',
-        'port': 12323,
+        'port': 12324,
         'username': '14a939d12d002',
         'password': 'e300685af2'
     },
     '+821039040988': {
         'proxy_id': 'proxy8',
         'addr': '88.209.253.159',
-        'port': 12323,
+        'port': 12324,
         'username': '14a939d12d002',
         'password': 'e300685af2'
     }
@@ -100,14 +100,14 @@ PROXY_ACCOUNT_MAPPING = {
 PROXIES = {
     'proxy9': {
         'addr': '88.209.253.106',
-        'port': 12323,
+        'port': 12324,
         'username': '14a939d12d002',
         'password': 'e300685af2',
         'accounts': []
     },
     'proxy10': {
         'addr': '88.209.253.52',
-        'port': 12323,
+        'port': 12324,
         'username': '14a939d12d002',
         'password': 'e300685af2',
         'accounts': []
@@ -355,38 +355,7 @@ def get_groups():
             groups = []
             async for dialog in clients[phone].iter_dialogs():
                 if dialog.is_group or dialog.is_channel:
-                    # 탈퇴한 그룹 제외 (강화된 필터링)
-                    try:
-                        entity = dialog.entity
-                        
-                        # 그룹에서 탈퇴했거나 추방당한 경우 제외
-                        if hasattr(entity, 'left') and entity.left:
-                            continue
-                        if hasattr(entity, 'kicked') and entity.kicked:
-                            continue
-                            
-                        # 참여자가 아닌 경우 제외
-                        if hasattr(entity, 'participant') and not entity.participant:
-                            continue
-                            
-                        # 접근 권한이 없는 경우 제외
-                        if hasattr(entity, 'access_hash') and not entity.access_hash:
-                            continue
-                            
-                        # 실제로 그룹에 참여 중인지 확인
-                        try:
-                            participants = await clients[phone].get_participants(entity, limit=1)
-                            if not participants:
-                                continue
-                        except:
-                            # 참여자 목록을 가져올 수 없으면 탈퇴한 것으로 간주
-                            continue
-                            
-                    except Exception as e:
-                        # 에러가 있는 그룹은 제외
-                        print(f"Error checking group {dialog.title}: {e}")
-                        continue
-                        
+                    # 모든 그룹/채널 표시 (필터링 제거)
                     groups.append({
                         'id': dialog.id,
                         'title': dialog.title,

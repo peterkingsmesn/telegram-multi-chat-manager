@@ -2458,13 +2458,15 @@ const AUTO_SETUP_PHONES = [
     '+821039622144', // 화력5
     '+821081724416', // 화력6
     '+821039040988', // 화력7
+    '+821084095699', // 화력8
+    '+821083554890', // 화력9
 ];
 
 let autoSetupState = {
     active: false,
-    currentFirepower: 1,
+    currentFirepower: 8,
     currentPhone: '',
-    maxFirepower: 7
+    maxFirepower: 9
 };
 
 // 자동 등록 시작
@@ -2474,7 +2476,7 @@ async function startAutoSetup() {
         return;
     }
     
-    if (!confirm('화력 1-7까지 자동으로 API를 등록하시겠습니까?\n각 단계에서 인증 코드만 입력하시면 됩니다.')) {
+    if (!confirm('화력 8-9까지 자동으로 API를 등록하시겠습니까?\n각 단계에서 인증 코드만 입력하시면 됩니다.')) {
         return;
     }
     
@@ -2505,7 +2507,7 @@ async function processNextFirepower() {
             elements.autoSetupBtn.disabled = false;
         }, 3000);
         
-        alert('화력 1-7까지 자동 등록이 완료되었습니다!');
+        alert('화력 8-9까지 자동 등록이 완료되었습니다!');
         return;
     }
     
@@ -2772,18 +2774,7 @@ async function sendProfitVerificationAuto(capacity) {
         // 전송 대상 계정들 수집
         const targetAccounts = [];
         
-        // 전문가 계정들 (모든 그룹에 전송)
-        if (appState.rooms.expert && appState.rooms.expert.length > 0) {
-            appState.rooms.expert.forEach((room, index) => {
-                if (room && room.phone && room.selectedGroups && room.selectedGroups.length > 0) {
-                    targetAccounts.push({
-                        phone: room.phone,
-                        groupIds: room.selectedGroups.map(g => g.id),
-                        type: 'expert'
-                    });
-                }
-            });
-        }
+        // 전문가 계정은 수익인증에서 제외
         
         // 화력별 계정들 (활성 그룹만)
         for (const firepower of Object.keys(appState.rooms.firepower)) {
@@ -3140,16 +3131,7 @@ async function sendProfitVerification() {
 function getAllActiveGroups() {
     const groups = [];
     
-    // 전문가 그룹
-    if (appState.rooms.expert) {
-        appState.rooms.expert.forEach(room => {
-            if (room.selectedGroups && room.phone) {
-                room.selectedGroups.forEach(group => {
-                    groups.push({ id: group.id, phone: room.phone });
-                });
-            }
-        });
-    }
+    // 전문가 그룹은 수익인증에서 제외
     
     // 화력 그룹
     Object.keys(appState.rooms.firepower).forEach(firepower => {
