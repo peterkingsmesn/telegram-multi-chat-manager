@@ -854,41 +854,72 @@ function saveToLocalStorage() {
 }
 
 // 저장된 데이터 로드 (강화된 버전)
-function loadSavedData() {
+async function loadSavedData() {
     try {
-        const saved = localStorage.getItem('telegramWorldState');
-        if (saved) {
-            const savedState = JSON.parse(saved);
-            console.log('Loading saved data:', savedState);
+        const savedData = localStorage.getItem('telegramWorldState');
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            console.log('Loading saved data:', data);
             
-            // 데이터 복원
-            Object.assign(appState, savedState);
+            // 저장된 데이터로 상태 복원
+            if (data.apis) appState.apis = data.apis;
+            if (data.expertApis) appState.expertApis = data.expertApis;
+            if (data.rooms) appState.rooms = data.rooms;
+            if (data.activeFirepower) appState.activeFirepower = data.activeFirepower;
+            if (data.templates) appState.templates = data.templates;
             
             // UI 업데이트
             renderApiGrid();
             renderExpertRooms();
-            renderFirepowerAccountsList();
+            renderFirepowerRooms(appState.activeFirepower);
+            updateGroupCounts();
             
-            // 저장된 화력 탭 복원
-            if (appState.activeFirepower && appState.activeFirepower !== 1) {
-                switchFirepower(appState.activeFirepower);
-            } else {
-                renderFirepowerRooms(1);
-            }
-            
-            console.log('Data loaded successfully');
-            
-            // 등록된 계정들의 그룹 목록을 실시간으로 새로고침 (비동기로 실행)
-            setTimeout(() => {
-                refreshAllAccountGroups();
-            }, 1000);
+            console.log('Data loaded successfully from localStorage');
         } else {
-            console.log('No saved data found');
+            console.log('No saved data found - checking server for logged accounts');
+            await loadAccountsFromServer();
         }
+        
     } catch (error) {
         console.error('Error loading saved data:', error);
         // 데이터가 손상된 경우 초기화
         localStorage.removeItem('telegramWorldState');
+        console.log('Corrupted data cleared - checking server for logged accounts');
+        await loadAccountsFromServer();
+    }
+}
+
+async function loadAccountsFromServer() {
+    try {
+        console.log('Checking server for logged accounts...');
+        const response = await fetch('http://127.0.0.1:5000/api/get-logged-accounts');
+        const data = await response.json();
+        
+        if (data.success && data.accounts.length > 0) {
+            console.log('Found logged accounts on server:', data.accounts);
+            
+            // 서버에서 로그인된 계정들을 전문가나 화력으로 복원
+            for (const account of data.accounts) {
+                if (account.status === 'logged_in') {
+                    // 임시로 전문가에 추가 (나중에 화력 구분 로직 추가 가능)
+                    appState.expertApis.push({
+                        phone: account.phone,
+                        user: account.user,
+                        groups: [] // 그룹은 별도로 로드 필요
+                    });
+                }
+            }
+            
+            // UI 업데이트
+            renderExpertRooms();
+            renderFirepowerRooms(appState.activeFirepower);
+            console.log('Accounts restored from server');
+        } else {
+            console.log('No logged accounts found on server');
+        }
+        
+    } catch (error) {
+        console.error('Error loading accounts from server:', error);
     }
 }
 

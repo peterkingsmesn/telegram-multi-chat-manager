@@ -24,7 +24,10 @@ API_CONFIGS = {
     '+821082019001': {'api_id': 28431661, 'api_hash': '48a8130d04abddb9dbc97026284579a1'},
     '+821039622144': {'api_id': 16490395, 'api_hash': '5d5c26f9dd354c302d0aeb01d95d8c47'},
     '+821081724416': {'api_id': 28909315, 'api_hash': '79013de375d6ea282e951ae48e6c4955'},
-    '+821039040988': {'api_id': 24304512, 'api_hash': '0ca82ad2de71545de2f9846e3a0192da'}
+    '+821039040988': {'api_id': 24304512, 'api_hash': '0ca82ad2de71545de2f9846e3a0192da'},
+    '+821084095699': {'api_id': 24530799, 'api_hash': '097062bc50fc6c063dde63ace30acbf1'},  # 8번 화력
+    '+821083554890': {'api_id': 29965481, 'api_hash': 'afeb4612d720ab8d2b211baa0ca3475f'},   # 9번 화력
+    '+821080670664': {'api_id': 26633894, 'api_hash': '5b01cdef060589ef2e299c463ec3f9a7'}   # 새 계정
 }
 
 # 기본 API (기존 계정용)
@@ -90,6 +93,27 @@ PROXY_ACCOUNT_MAPPING = {
     '+821039040988': {
         'proxy_id': 'proxy8',
         'addr': '88.209.253.159',
+        'port': 12324,
+        'username': '14a939d12d002',
+        'password': 'e300685af2'
+    },
+    '+821084095699': {
+        'proxy_id': 'proxy9',
+        'addr': '88.209.253.106',
+        'port': 12324,
+        'username': '14a939d12d002',
+        'password': 'e300685af2'
+    },
+    '+821083554890': {
+        'proxy_id': 'proxy10',
+        'addr': '88.209.253.52',
+        'port': 12324,
+        'username': '14a939d12d002',
+        'password': 'e300685af2'
+    },
+    '+821080670664': {
+        'proxy_id': 'proxy8_alt',
+        'addr': '88.209.253.106',
         'port': 12324,
         'username': '14a939d12d002',
         'password': 'e300685af2'
@@ -159,17 +183,25 @@ def connect():
     global clients, phone_code_hashes
     
     data = request.json
+    print(f"[CONNECT] Received request: {data}")
+    
     phone = data.get('phone')
+    print(f"[CONNECT] Phone: {phone}")
     
     if not phone:
+        print(f"[CONNECT] ERROR: No phone number provided")
         return jsonify({'success': False, 'error': '전화번호가 필요합니다'}), 400
     
     # 프록시 할당
     proxy_id, proxy_info = get_proxy_for_phone(phone)
+    print(f"[CONNECT] Proxy ID: {proxy_id}, Proxy Info: {proxy_info}")
+    
     if not proxy_info:
+        print(f"[CONNECT] ERROR: No proxy available for {phone}")
         return jsonify({'success': False, 'error': '사용 가능한 프록시가 없습니다'}), 500
     
-    session_path = os.path.join(SESSIONS_DIR, phone.replace('+', ''))
+    session_path = os.path.join(SESSIONS_DIR, phone.replace('+', '').replace(' ', ''))
+    print(f"[CONNECT] Session path: {session_path}")
     
     try:
         loop = get_or_create_loop()
@@ -184,10 +216,6 @@ def connect():
             del clients[phone]
         
         # 새 클라이언트 생성
-        # 프록시 설정
-        proxy = (socks.SOCKS5, proxy_info['addr'], proxy_info['port'], 
-                True, proxy_info['username'], proxy_info['password'])
-        
         # 해당 전화번호의 API 설정 가져오기
         if phone in API_CONFIGS:
             api_id = API_CONFIGS[phone]['api_id']
@@ -196,18 +224,48 @@ def connect():
             api_id = DEFAULT_API_ID
             api_hash = DEFAULT_API_HASH
         
-        clients[phone] = TelegramClient(
-            session_path, 
-            api_id, 
-            api_hash,
-            proxy=proxy
-        )
+        # 새 계정: 등록된 세션이 있으면 프록시 사용, 없으면 직접 연결
+        if phone == '+821080670664':
+            session_exists = os.path.exists(session_path + '.session')
+            if session_exists:
+                print(f"[CONNECT] Using proxy connection for registered account {phone}")
+                proxy = (socks.SOCKS5, proxy_info['addr'], proxy_info['port'], 
+                        True, proxy_info['username'], proxy_info['password'])
+                clients[phone] = TelegramClient(
+                    session_path, 
+                    api_id, 
+                    api_hash,
+                    proxy=proxy
+                )
+            else:
+                print(f"[CONNECT] Using direct connection for new account registration {phone}")
+                clients[phone] = TelegramClient(
+                    session_path, 
+                    api_id, 
+                    api_hash
+                )
+        else:
+            # 기존 계정들은 프록시 사용
+            proxy = (socks.SOCKS5, proxy_info['addr'], proxy_info['port'], 
+                    True, proxy_info['username'], proxy_info['password'])
+            print(f"[CONNECT] Using proxy connection for existing account {phone}")
+            clients[phone] = TelegramClient(
+                session_path, 
+                api_id, 
+                api_hash,
+                proxy=proxy
+            )
         
         async def send_code():
+            print(f"[SEND_CODE] Connecting to Telegram...")
             await clients[phone].connect()
+            print(f"[SEND_CODE] Connected successfully")
             
+            print(f"[SEND_CODE] Checking authorization status...")
             if await clients[phone].is_user_authorized():
+                print(f"[SEND_CODE] User already authorized")
                 user = await clients[phone].get_me()
+                print(f"[SEND_CODE] User: {user.first_name} ({user.phone})")
                 return {
                     'success': True,
                     'message': f'계정 {user.first_name}로 이미 로그인되어 있습니다',
@@ -221,7 +279,9 @@ def connect():
                     }
                 }
             
+            print(f"[SEND_CODE] Sending SMS code request to {phone}...")
             result = await clients[phone].send_code_request(phone)
+            print(f"[SEND_CODE] SMS code request successful! Hash: {result.phone_code_hash[:20]}...")
             return {
                 'success': True, 
                 'message': f'인증 코드가 {phone}로 전송되었습니다', 
@@ -231,12 +291,18 @@ def connect():
             }
         
         result = loop.run_until_complete(send_code())
+        print(f"[CONNECT] Result: {result}")
+        
         if 'hash' in result:
             phone_code_hashes[phone] = result['hash']
             del result['hash']
         return jsonify(result)
         
     except Exception as e:
+        print(f"[CONNECT] ERROR: {str(e)}")
+        print(f"[CONNECT] Error type: {type(e).__name__}")
+        import traceback
+        print(f"[CONNECT] Traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/verify', methods=['POST'])
@@ -379,17 +445,30 @@ def send_message():
     global clients
     
     data = request.json
+    print(f"[SEND_MESSAGE] Received request: {data}")
+    
     phone = data.get('phone')
     group_ids = data.get('group_ids', [])
     message = data.get('message')
     
+    print(f"[SEND_MESSAGE] Phone: {phone}")
+    print(f"[SEND_MESSAGE] Group IDs: {group_ids}")
+    print(f"[SEND_MESSAGE] Message: {message}")
+    
     if not all([phone, group_ids, message]):
+        print(f"[SEND_MESSAGE] ERROR: Missing required information")
+        print(f"[SEND_MESSAGE] Phone present: {bool(phone)}")
+        print(f"[SEND_MESSAGE] Group IDs present: {bool(group_ids)}")
+        print(f"[SEND_MESSAGE] Message present: {bool(message)}")
         return jsonify({'success': False, 'error': '필수 정보가 누락되었습니다'}), 400
     
     if not isinstance(group_ids, list):
         group_ids = [group_ids]
     
+    print(f"[SEND_MESSAGE] Available clients: {list(clients.keys())}")
+    
     if phone not in clients:
+        print(f"[SEND_MESSAGE] ERROR: Phone {phone} not in clients")
         return jsonify({'success': False, 'error': '먼저 로그인해주세요'}), 400
     
     try:
@@ -509,6 +588,60 @@ def send_images():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/get-logged-accounts', methods=['GET'])
+def get_logged_accounts():
+    """현재 로그인된 계정 목록 반환"""
+    global clients
+    
+    logged_accounts = []
+    
+    for phone, client in clients.items():
+        try:
+            # 비동기 함수를 동기적으로 실행
+            loop = get_or_create_loop()
+            
+            async def check_account():
+                try:
+                    if not client.is_connected():
+                        await client.connect()
+                    
+                    if await client.is_user_authorized():
+                        user = await client.get_me()
+                        return {
+                            'phone': phone,
+                            'user': {
+                                'id': user.id,
+                                'username': user.username,
+                                'first_name': user.first_name,
+                                'phone': user.phone
+                            },
+                            'status': 'logged_in'
+                        }
+                except Exception as e:
+                    return {
+                        'phone': phone,
+                        'status': 'error',
+                        'error': str(e)
+                    }
+                return None
+            
+            account_info = loop.run_until_complete(check_account())
+            if account_info:
+                logged_accounts.append(account_info)
+                
+        except Exception as e:
+            logged_accounts.append({
+                'phone': phone,
+                'status': 'error',
+                'error': str(e)
+            })
+    
+    return jsonify({
+        'success': True,
+        'accounts': logged_accounts,
+        'count': len(logged_accounts)
+    })
+
 @app.route('/api/proxy-status', methods=['GET'])
 def proxy_status():
     """프록시 상태 확인 API"""
@@ -544,6 +677,54 @@ def proxy_status():
         'legacy_accounts': sum(len(p['accounts']) for p in PROXIES.values())
     })
 
+def auto_load_sessions():
+    """서버 시작 시 기존 세션 파일들을 자동으로 로드"""
+    global clients
+    
+    print("\n=== Auto-loading existing sessions ===")
+    
+    if not os.path.exists(SESSIONS_DIR):
+        print("No sessions directory found")
+        return
+    
+    # 세션 파일들 찾기
+    session_files = [f for f in os.listdir(SESSIONS_DIR) if f.endswith('.session')]
+    print(f"Found {len(session_files)} session files")
+    
+    for session_file in session_files:
+        try:
+            # 파일명에서 전화번호 추출
+            phone_number = '+' + session_file.replace('.session', '')
+            
+            # API 설정 찾기
+            if phone_number in API_CONFIGS:
+                api_id = API_CONFIGS[phone_number]['api_id']
+                api_hash = API_CONFIGS[phone_number]['api_hash']
+            else:
+                api_id = DEFAULT_API_ID
+                api_hash = DEFAULT_API_HASH
+            
+            # 프록시 찾기
+            proxy_id, proxy_info = get_proxy_for_phone(phone_number)
+            
+            session_path = os.path.join(SESSIONS_DIR, session_file.replace('.session', ''))
+            
+            # 클라이언트 생성 (프록시 있으면 사용)
+            if proxy_info and phone_number != '+821080670664':
+                proxy = (socks.SOCKS5, proxy_info['addr'], proxy_info['port'], 
+                        True, proxy_info['username'], proxy_info['password'])
+                clients[phone_number] = TelegramClient(session_path, api_id, api_hash, proxy=proxy)
+            else:
+                clients[phone_number] = TelegramClient(session_path, api_id, api_hash)
+            
+            print(f"✅ Loaded session for {phone_number}")
+            
+        except Exception as e:
+            print(f"❌ Failed to load {session_file}: {str(e)}")
+    
+    print(f"Auto-loaded {len(clients)} sessions")
+    print("=======================================\n")
+
 if __name__ == '__main__':
     print("=" * 50)
     print("Telegram API Server - Proxy Version")
@@ -552,4 +733,8 @@ if __name__ == '__main__':
     print("프록시 서버 10개 설정 완료!")
     print("각 프록시는 자동으로 계정에 할당됩니다.")
     print("=" * 50)
+    
+    # 기존 세션 자동 로드
+    auto_load_sessions()
+    
     app.run(debug=True, port=5000, threaded=False)
