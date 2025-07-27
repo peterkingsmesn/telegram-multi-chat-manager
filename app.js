@@ -3,6 +3,7 @@ const appState = {
     apis: [],
     expertApis: [], // 전문가 섹션 API들
     activeFirepower: 1,
+    activeExpert: null, // 현재 활성화된 전문가 인덱스 (하나만 선택 가능)
     rooms: {
         expert: [],
         firepower: {} // 1-30까지 각각 독립적으로 관리
@@ -60,6 +61,20 @@ function init() {
     } catch (e) {
         console.error('Error in renderFirepowerAccountsList:', e);
     }
+    
+    try {
+        cleanupDuplicateAccounts();
+        console.log('cleanupDuplicateAccounts completed');
+    } catch (e) {
+        console.error('Error in cleanupDuplicateAccounts:', e);
+    }
+    
+    try {
+        debugLoggedAccounts();
+        console.log('debugLoggedAccounts completed');
+    } catch (e) {
+        console.error('Error in debugLoggedAccounts:', e);
+    }
 }
 
 // DOM 요소 초기화
@@ -112,7 +127,15 @@ function initializeElements() {
         cancelProfitBtn: document.getElementById('cancelProfitBtn'),
         // 화력 리스트
         firepowerAccountsList: document.getElementById('firepowerAccountsList'),
-        refreshAllGroupsBtn: document.getElementById('refreshAllGroupsBtn')
+        refreshAllGroupsBtn: document.getElementById('refreshAllGroupsBtn'),
+        // 사용자 API 등록 모달
+        apiRegisterModal: document.getElementById('apiRegisterModal'),
+        registerPhoneInput: document.getElementById('registerPhoneInput'),
+        registerApiIdInput: document.getElementById('registerApiIdInput'),
+        registerApiHashInput: document.getElementById('registerApiHashInput'),
+        registerApiBtn: document.getElementById('registerApiBtn'),
+        cancelRegisterBtn: document.getElementById('cancelRegisterBtn'),
+        registerStatus: document.getElementById('registerStatus')
     };
 }
 
@@ -169,6 +192,14 @@ function setupEventListeners() {
     
     if (elements.messageTextarea) {
         elements.messageTextarea.addEventListener('paste', handlePaste);
+        
+        // 엔터키로 메시지 전송 (Shift+Enter는 줄바꿈)
+        elements.messageTextarea.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault(); // 기본 줄바꿈 방지
+                sendMessage(); // 메시지 전송
+            }
+        });
     }
 
     // 전문가 섹션 이벤트
@@ -229,6 +260,12 @@ function setupEventListeners() {
         elements.verifyCodeBtn.addEventListener('click', verifyTelegramCode);
     }
     
+    // 전문가 앱 인증 버튼
+    const expertAppAuthBtn = document.getElementById('expertAppAuthBtn');
+    if (expertAppAuthBtn) {
+        expertAppAuthBtn.addEventListener('click', requestExpertAppAuth);
+    }
+    
     if (elements.testConnectionBtn) {
         elements.testConnectionBtn.addEventListener('click', testTelegramConnection);
     }
@@ -271,6 +308,60 @@ function setupEventListeners() {
                     elements.refreshAllGroupsBtn.textContent = '🔄';
                     elements.refreshAllGroupsBtn.disabled = false;
                 }, 2000);
+            }
+        });
+    }
+    
+    // 사용자 API 등록 모달 이벤트
+    if (elements.registerApiBtn) {
+        elements.registerApiBtn.addEventListener('click', registerUserAPI);
+    }
+    
+    if (elements.cancelRegisterBtn) {
+        elements.cancelRegisterBtn.addEventListener('click', () => {
+            elements.apiRegisterModal.classList.remove('active');
+            clearRegistrationModal();
+        });
+    }
+    
+    // API 등록 모달 열기 버튼 추가 (필요시)
+    const showRegisterModalBtn = document.getElementById('showRegisterModalBtn');
+    if (showRegisterModalBtn) {
+        showRegisterModalBtn.addEventListener('click', () => {
+            elements.apiRegisterModal.classList.add('active');
+        });
+    }
+    
+    // 중복 정리 버튼
+    const cleanupDuplicatesBtn = document.getElementById('cleanupDuplicatesBtn');
+    if (cleanupDuplicatesBtn) {
+        cleanupDuplicatesBtn.addEventListener('click', () => {
+            if (confirm('화력과 중복된 전문가 계정을 정리하시겠습니까?')) {
+                cleanupDuplicateAccounts();
+            }
+        });
+    }
+    
+    // 중요 계정 재연결 버튼
+    const reconnectAccountsBtn = document.getElementById('reconnectAccountsBtn');
+    if (reconnectAccountsBtn) {
+        reconnectAccountsBtn.addEventListener('click', async () => {
+            reconnectAccountsBtn.disabled = true;
+            reconnectAccountsBtn.textContent = '재연결 중...';
+            
+            try {
+                const success = await reconnectMissingAccounts();
+                if (success) {
+                    showSuccessMessage('중요 계정 재연결이 완료되었습니다.');
+                } else {
+                    showErrorMessage('재연결 중 일부 오류가 발생했습니다.');
+                }
+            } catch (error) {
+                console.error('Reconnect error:', error);
+                showErrorMessage('재연결 중 오류가 발생했습니다.');
+            } finally {
+                reconnectAccountsBtn.disabled = false;
+                reconnectAccountsBtn.textContent = '중요 계정 재연결';
             }
         });
     }
@@ -588,12 +679,13 @@ async function sendMessage() {
     // 선택된 그룹들 가져오기
     const selectedGroups = getSelectedGroups();
     
-    // 만약 선택된 그룹이 없으면 전문가 계정의 모든 그룹을 강제로 선택
+    // 만약 선택된 그룹이 없으면 활성화된 전문가 계정의 모든 그룹을 강제로 선택
     if (selectedGroups.length === 0) {
-        // 전문가 계정이 있으면 모든 그룹 추가
+        // 활성화된 전문가 계정이 있으면 모든 그룹 추가
         if (appState.rooms.expert && appState.rooms.expert.length > 0) {
             appState.rooms.expert.forEach((room, index) => {
-                if (room && room.phone && room.selectedGroups && room.selectedGroups.length > 0) {
+                // enabled된 전문가만 포함
+                if (room && room.phone && room.enabled !== false && room.selectedGroups && room.selectedGroups.length > 0) {
                     room.selectedGroups.forEach((group) => {
                         selectedGroups.push({
                             phone: room.phone,
@@ -667,6 +759,8 @@ async function sendMessage() {
         } else {
             // 텍스트만 전송
             for (const group of selectedGroups) {
+                console.log(`📤 Sending message to: ${group.phone} -> ${group.groupTitle} (ID: ${group.groupId})`);
+                
                 try {
                     const response = await fetch(`${API_BASE_URL}/send-message`, {
                         method: 'POST',
@@ -683,14 +777,30 @@ async function sendMessage() {
                     const result = await response.json();
                     if (result.success) {
                         totalSent++;
-                        console.log(`Message sent to ${group.phone} - ${group.groupId}`);
+                        console.log(`✅ Message sent successfully to ${group.phone} -> ${group.groupTitle}`);
                     } else {
                         totalFailed++;
-                        console.error(`Failed to send to ${group.phone}:`, result.error);
+                        console.error(`❌ Failed to send to ${group.phone} -> ${group.groupTitle}:`, result.error);
+                        
+                        // 10번 계정 특별 디버깅
+                        if (group.phone === '+821080670664') {
+                            console.error(`🚨 10번 계정 (${group.phone}) 전송 실패 상세:`, {
+                                phone: group.phone,
+                                groupId: group.groupId,
+                                groupTitle: group.groupTitle,
+                                error: result.error,
+                                fullResponse: result
+                            });
+                        }
                     }
                 } catch (error) {
                     totalFailed++;
-                    console.error(`Error sending to ${group.phone}:`, error);
+                    console.error(`💥 Network error sending to ${group.phone}:`, error);
+                    
+                    // 10번 계정 특별 디버깅
+                    if (group.phone === '+821080670664') {
+                        console.error(`🚨 10번 계정 (${group.phone}) 네트워크 오류:`, error);
+                    }
                 }
                 
                 // 전송 간격
@@ -719,23 +829,45 @@ async function sendMessage() {
     }
 }
 
+// 전화번호 정규화 함수 (전역 사용)
+function normalizePhone(phone) {
+    if (!phone) return phone;
+    
+    // 공백과 특수문자 제거
+    let normalized = phone.replace(/\s+/g, '').replace(/[-()]/g, '');
+    
+    // +82로 시작하지 않으면 추가
+    if (!normalized.startsWith('+82')) {
+        if (normalized.startsWith('82')) {
+            normalized = '+' + normalized;
+        } else if (normalized.startsWith('010')) {
+            normalized = '+82' + normalized.substring(1);
+        } else {
+            normalized = '+82' + normalized;
+        }
+    }
+    
+    return normalized;
+}
+
 // 선택된 그룹들 가져오기
 function getSelectedGroups() {
     const selectedGroups = [];
     
-    // 전문가 계정들의 선택된 그룹 - 화력과 동일한 방식으로 처리
+    // 전문가 계정들의 선택된 그룹 - enabled된 전문가만 포함
     if (appState.rooms.expert && appState.rooms.expert.length > 0) {
-        appState.rooms.expert.forEach((room, index) => {
-            if (room && room.phone && room.selectedGroups && room.selectedGroups.length > 0) {
-                room.selectedGroups.forEach((group) => {
-                    // 화력과 동일하게 active 체크
+        appState.rooms.expert.forEach((expertRoom, expertIndex) => {
+            // enabled된 전문가만 메시지 전송에 포함
+            if (expertRoom && expertRoom.phone && expertRoom.enabled !== false && expertRoom.selectedGroups && expertRoom.selectedGroups.length > 0) {
+                expertRoom.selectedGroups.forEach((group) => {
+                    // 활성화된 그룹만 포함
                     if (group.active !== false) {
                         selectedGroups.push({
-                            phone: room.phone,
+                            phone: expertRoom.phone,
                             groupId: group.id,
                             groupTitle: group.name || group.title,
                             accountType: 'expert',
-                            accountIndex: index
+                            accountIndex: expertIndex
                         });
                     }
                 });
@@ -859,13 +991,24 @@ async function loadSavedData() {
         const savedData = localStorage.getItem('telegramWorldState');
         if (savedData) {
             const data = JSON.parse(savedData);
-            console.log('Loading saved data:', data);
+            console.log('💾 Loading saved data from localStorage:', data);
             
             // 저장된 데이터로 상태 복원
             if (data.apis) appState.apis = data.apis;
             if (data.expertApis) appState.expertApis = data.expertApis;
-            if (data.rooms) appState.rooms = data.rooms;
+            if (data.rooms) {
+                appState.rooms = data.rooms;
+                // expert rooms가 배열이 아닌 경우 수정
+                if (!Array.isArray(appState.rooms.expert)) {
+                    appState.rooms.expert = [];
+                }
+                // firepower rooms가 객체가 아닌 경우 수정
+                if (!appState.rooms.firepower || typeof appState.rooms.firepower !== 'object') {
+                    appState.rooms.firepower = {};
+                }
+            }
             if (data.activeFirepower) appState.activeFirepower = data.activeFirepower;
+            if (data.activeExpert !== undefined) appState.activeExpert = data.activeExpert;
             if (data.templates) appState.templates = data.templates;
             
             // UI 업데이트
@@ -874,18 +1017,28 @@ async function loadSavedData() {
             renderFirepowerRooms(appState.activeFirepower);
             updateGroupCounts();
             
-            console.log('Data loaded successfully from localStorage');
+            console.log('✅ Data loaded successfully from localStorage');
+            
+            // localStorage에 데이터가 있으면 서버 복원은 하지 않음 (중복 방지)
+            console.log('📂 LocalStorage 데이터가 있으므로 서버 복원을 건너뜁니다.');
+            
         } else {
-            console.log('No saved data found - checking server for logged accounts');
+            console.log('📂 No saved data found - checking server for logged accounts');
             await loadAccountsFromServer();
         }
         
+        // 중요 계정들이 연결되어 있는지 확인하고 재연결 시도
+        await reconnectMissingAccounts();
+        
     } catch (error) {
-        console.error('Error loading saved data:', error);
+        console.error('❌ Error loading saved data:', error);
         // 데이터가 손상된 경우 초기화
         localStorage.removeItem('telegramWorldState');
-        console.log('Corrupted data cleared - checking server for logged accounts');
+        console.log('🧹 Corrupted data cleared - checking server for logged accounts');
         await loadAccountsFromServer();
+        
+        // 중요 계정들이 연결되어 있는지 확인하고 재연결 시도
+        await reconnectMissingAccounts();
     }
 }
 
@@ -898,28 +1051,247 @@ async function loadAccountsFromServer() {
         if (data.success && data.accounts.length > 0) {
             console.log('Found logged accounts on server:', data.accounts);
             
-            // 서버에서 로그인된 계정들을 전문가나 화력으로 복원
+            // 서버에서 로그인된 계정들을 복원
             for (const account of data.accounts) {
                 if (account.status === 'logged_in') {
-                    // 임시로 전문가에 추가 (나중에 화력 구분 로직 추가 가능)
-                    appState.expertApis.push({
-                        phone: account.phone,
-                        user: account.user,
-                        groups: [] // 그룹은 별도로 로드 필요
-                    });
+                    console.log(`Restoring account: ${account.phone} (${account.user})`);
+                    
+                    // 계정의 그룹 목록을 가져와서 복원
+                    try {
+                        const groupResponse = await fetch(`http://127.0.0.1:5000/api/get-groups`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                phone: account.phone
+                            })
+                        });
+                        const groupData = await groupResponse.json();
+                        
+                        if (groupData.success && groupData.groups.length > 0) {
+                            // 화력에 등록된 계정인지 확인
+                            const isFirepowerAccount = Object.values(appState.rooms.firepower).some(rooms => {
+                                const room = rooms && rooms[0];
+                                return room && normalizePhone(room.phone) === normalizePhone(account.phone);
+                            });
+                            
+                            if (!isFirepowerAccount) {
+                                // 화력에 없는 계정만 전문가 섹션에 복원
+                                const expertRoom = {
+                                    phone: account.phone,
+                                    user: account.user,
+                                    selectedGroups: groupData.groups.map(group => ({
+                                        id: group.id,
+                                        name: group.title,
+                                        title: group.title,
+                                        active: true
+                                    })),
+                                    availableGroups: groupData.groups,
+                                    active: true,
+                                    enabled: true  // 개별 토글용 필드 추가
+                                };
+                                
+                                // 중복 확인 후 추가
+                                const existingIndex = appState.rooms.expert.findIndex(room => room && normalizePhone(room.phone) === normalizePhone(account.phone));
+                                if (existingIndex >= 0) {
+                                    appState.rooms.expert[existingIndex] = expertRoom;
+                                } else {
+                                    appState.rooms.expert.push(expertRoom);
+                                }
+                                
+                                console.log(`Restored ${account.phone} as expert with ${groupData.groups.length} groups`);
+                            } else {
+                                console.log(`Skipped ${account.phone} - already registered as firepower`);
+                            }
+                        } else {
+                            // 그룹이 없어도 화력에 없는 계정은 복원
+                            const isFirepowerAccount = Object.values(appState.rooms.firepower).some(rooms => {
+                                const room = rooms && rooms[0];
+                                return room && normalizePhone(room.phone) === normalizePhone(account.phone);
+                            });
+                            
+                            if (!isFirepowerAccount) {
+                                const expertRoom = {
+                                    phone: account.phone,
+                                    user: account.user,
+                                    selectedGroups: [],
+                                    availableGroups: [],
+                                    active: true,
+                                    enabled: true  // 개별 토글용 필드 추가
+                                };
+                                
+                                const existingIndex = appState.rooms.expert.findIndex(room => room && normalizePhone(room.phone) === normalizePhone(account.phone));
+                                if (existingIndex >= 0) {
+                                    appState.rooms.expert[existingIndex] = expertRoom;
+                                } else {
+                                    appState.rooms.expert.push(expertRoom);
+                                }
+                                
+                                console.log(`Restored ${account.phone} with no groups`);
+                            } else {
+                                console.log(`Skipped ${account.phone} - already registered as firepower (no groups)`);
+                            }
+                        }
+                    } catch (groupError) {
+                        console.error(`Error loading groups for ${account.phone}:`, groupError);
+                        
+                        // 그룹 로드 실패해도 화력에 없는 계정은 복원
+                        const isFirepowerAccount = Object.values(appState.rooms.firepower).some(rooms => {
+                            const room = rooms && rooms[0];
+                            return room && normalizePhone(room.phone) === normalizePhone(account.phone);
+                        });
+                        
+                        if (!isFirepowerAccount) {
+                            const expertRoom = {
+                                phone: account.phone,
+                                user: account.user,
+                                selectedGroups: [],
+                                availableGroups: [],
+                                active: true,
+                                enabled: true  // 개별 토글용 필드 추가
+                            };
+                            
+                            const existingIndex = appState.rooms.expert.findIndex(room => room && normalizePhone(room.phone) === normalizePhone(account.phone));
+                            if (existingIndex >= 0) {
+                                appState.rooms.expert[existingIndex] = expertRoom;
+                            } else {
+                                appState.rooms.expert.push(expertRoom);
+                            }
+                            
+                            console.log(`Restored ${account.phone} with failed group loading`);
+                        } else {
+                            console.log(`Skipped ${account.phone} - already registered as firepower (group load failed)`);
+                        }
+                    }
                 }
             }
             
-            // UI 업데이트
+            // 데이터 저장 및 UI 업데이트
+            saveToLocalStorage();
             renderExpertRooms();
             renderFirepowerRooms(appState.activeFirepower);
-            console.log('Accounts restored from server');
+            renderFirepowerAccountsList();
+            console.log('Accounts restored from server successfully');
         } else {
             console.log('No logged accounts found on server');
         }
         
     } catch (error) {
         console.error('Error loading accounts from server:', error);
+    }
+}
+
+// 누락된 중요 계정들을 자동으로 재연결 시도
+async function reconnectMissingAccounts() {
+    const criticalAccounts = ['+821080670664', '+821077871056']; // 10번, 11번 계정
+    
+    try {
+        console.log('🔄 Critical accounts reconnection check...');
+        
+        // 현재 로그인된 계정 목록 가져오기
+        const loggedResponse = await fetch('http://127.0.0.1:5000/api/get-logged-accounts');
+        const loggedData = await loggedResponse.json();
+        
+        const loggedPhones = loggedData.success ? loggedData.accounts.map(acc => acc.phone) : [];
+        
+        // 누락된 계정 찾기
+        const missingAccounts = criticalAccounts.filter(phone => !loggedPhones.includes(phone));
+        
+        if (missingAccounts.length === 0) {
+            console.log('✅ All critical accounts are connected');
+            return true;
+        }
+        
+        console.log(`🚨 Missing critical accounts: ${missingAccounts.join(', ')}`);
+        
+        // 각 누락된 계정에 대해 재연결 시도
+        for (const phone of missingAccounts) {
+            console.log(`🔄 Attempting to reconnect ${phone}...`);
+            
+            try {
+                // connect API 호출 (세션이 있으면 자동 로그인)
+                const connectResponse = await fetch(`${API_BASE_URL}/connect`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phone: phone
+                    })
+                });
+                
+                const connectResult = await connectResponse.json();
+                
+                if (connectResult.success) {
+                    console.log(`✅ Reconnected ${phone} successfully`);
+                    
+                    // 연결 후 그룹 목록 가져와서 복원
+                    try {
+                        const groupResponse = await fetch(`${API_BASE_URL}/get-groups`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                phone: phone
+                            })
+                        });
+                        
+                        const groupData = await groupResponse.json();
+                        
+                        if (groupData.success && groupData.groups && groupData.groups.length > 0) {
+                            console.log(`📋 Restored ${groupData.groups.length} groups for ${phone}`);
+                            
+                            // 전문가 섹션에 복원
+                            const expertRoom = {
+                                phone: phone,
+                                user: connectResult.user || { first_name: phone.slice(-4) },
+                                selectedGroups: groupData.groups.map(group => ({
+                                    id: group.id,
+                                    name: group.title,
+                                    title: group.title,
+                                    active: true
+                                })),
+                                availableGroups: groupData.groups,
+                                active: true,
+                                enabled: true  // 개별 토글용 필드 추가
+                            };
+                            
+                            // 중복 확인 후 추가
+                            const existingIndex = appState.rooms.expert.findIndex(room => room && room.phone === phone);
+                            if (existingIndex >= 0) {
+                                appState.rooms.expert[existingIndex] = expertRoom;
+                            } else {
+                                appState.rooms.expert.push(expertRoom);
+                            }
+                        }
+                    } catch (groupError) {
+                        console.error(`Error loading groups for ${phone}:`, groupError);
+                    }
+                    
+                } else {
+                    console.error(`❌ Failed to reconnect ${phone}:`, connectResult.error);
+                }
+            } catch (error) {
+                console.error(`💥 Error reconnecting ${phone}:`, error);
+            }
+            
+            // 연결 시도 간 대기
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        // UI 업데이트
+        saveToLocalStorage();
+        renderExpertRooms();
+        renderFirepowerAccountsList();
+        
+        console.log('🔄 Critical accounts reconnection completed');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error in reconnectMissingAccounts:', error);
+        return false;
     }
 }
 
@@ -969,10 +1341,21 @@ function renderExpertRooms() {
             const groupCount = room.selectedGroups ? room.selectedGroups.filter(g => g.active !== false).length : 0;
             const phone = room.phone || '알 수 없음';
             
+            const isEnabled = room.enabled !== false;
+            
             roomCard.innerHTML = `
                 <div class="room-header">
                     <h3>🔹 ${userName} (${phone})</h3>
-                    <span class="room-status ${room.active ? 'active' : 'inactive'}">${room.active ? '활성' : '비활성'}</span>
+                    <div class="expert-toggle-container">
+                        <label class="expert-toggle">
+                            <input type="checkbox" ${isEnabled ? 'checked' : ''} 
+                                   onchange="toggleExpertEnabled(${index})">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="expert-status ${isEnabled ? 'enabled' : 'disabled'}">
+                            ${isEnabled ? '활성화' : '비활성화'}
+                        </span>
+                    </div>
                 </div>
                 <div class="room-info">
                     <p>📊 선택된 그룹: <span class="group-count">${groupCount}개</span></p>
@@ -1064,6 +1447,8 @@ async function refreshExpertGroups(index) {
         return;
     }
     
+    console.log(`🔄 전문가 ${index} (${room.phone}) 그룹 새로고침 시작`);
+    
     try {
         const response = await fetch(`${API_BASE_URL}/get-groups`, {
             method: 'POST',
@@ -1072,22 +1457,37 @@ async function refreshExpertGroups(index) {
         });
         
         const data = await response.json();
+        console.log(`📊 ${room.phone} 그룹 응답:`, data);
         
         if (data.success) {
-            // 모든 그룹을 저장 (기본적으로 모두 체크된 상태)
-            room.selectedGroups = data.groups.map(group => ({
-                id: group.id,
-                name: group.title,
-                active: true
-            }));
+            // 기존 선택 상태 보존
+            const existingSelection = room.selectedGroups ? room.selectedGroups.map(g => g.id) : [];
+            console.log(`💾 기존 선택된 그룹 ID:`, existingSelection);
+            
+            // 새로운 그룹 목록에서 기존 선택 상태 유지
+            room.selectedGroups = data.groups.map(group => {
+                const wasSelected = existingSelection.includes(group.id);
+                return {
+                    id: group.id,
+                    name: group.title,
+                    title: group.title,
+                    active: wasSelected || existingSelection.length === 0 // 첫 로드시에는 모두 선택
+                };
+            });
+            
+            room.availableGroups = data.groups;
+            
+            console.log(`✅ ${room.phone}: ${data.groups.length}개 그룹 중 ${room.selectedGroups.filter(g => g.active).length}개 선택됨`);
             
             renderExpertRooms();
             saveToLocalStorage();
-            alert(`${data.groups.length}개 그룹이 새로고침되었습니다.`);
+            alert(`${data.groups.length}개 그룹이 새로고침되었습니다. (${room.selectedGroups.filter(g => g.active).length}개 선택 유지)`);
         } else {
+            console.error(`❌ ${room.phone} 그룹 로드 실패:`, data.error);
             alert(`그룹 로드 실패: ${data.error}`);
         }
     } catch (error) {
+        console.error(`💥 ${room.phone} 그룹 로드 오류:`, error);
         alert(`그룹 로드 오류: ${error.message}`);
     }
 }
@@ -1113,11 +1513,39 @@ async function testExpertConnection(phone) {
     }
 }
 
+// 전문가 개별 on/off 토글
+function toggleExpertEnabled(index) {
+    if (!appState.rooms.expert[index]) {
+        console.error(`전문가 ${index} not found`);
+        return;
+    }
+    
+    const expert = appState.rooms.expert[index];
+    const previousState = expert.enabled !== false; // 기본값은 true
+    expert.enabled = !previousState;
+    
+    console.log(`🔄 전문가 ${index} (${expert.phone}) 메시지 전송 토글: ${previousState ? 'ON' : 'OFF'} -> ${expert.enabled ? 'ON' : 'OFF'}`);
+    
+    // UI 업데이트
+    renderExpertRooms();
+    updateSelectedGroupCount();
+    saveToLocalStorage();
+}
+
 // 전문가 API 삭제
 function removeExpertRoom(index) {
     if (confirm('이 전문가 API를 삭제하시겠습니까?')) {
+        // 삭제할 전문가가 현재 활성화된 전문가라면 activeExpert 초기화
+        if (appState.activeExpert === index) {
+            appState.activeExpert = null;
+        } else if (appState.activeExpert > index) {
+            // 삭제할 전문가보다 뒤에 있는 전문가가 활성화되어 있다면 인덱스 조정
+            appState.activeExpert--;
+        }
+        
         appState.rooms.expert.splice(index, 1);
         renderExpertRooms();
+        updateSelectedGroupCount();
         saveToLocalStorage();
     }
 }
@@ -1151,15 +1579,15 @@ function renderBroadcastGroupList() {
     
     console.log('Rendering broadcast group list...');
     
-    // 전문가 계정들의 그룹
+    // 전문가 계정들의 그룹 (enabled된 전문가만)
     if (appState.rooms.expert && appState.rooms.expert.length > 0) {
         appState.rooms.expert.forEach((room, index) => {
-            if (room && room.phone && room.groups && room.groups.length > 0) {
+            if (room && room.phone && room.enabled !== false && room.selectedGroups && room.selectedGroups.length > 0) {
                 // 계정 헤더
                 const accountHeader = document.createElement('div');
                 accountHeader.className = 'account-header';
                 accountHeader.innerHTML = `
-                    <h4>전문가 ${index + 1}: ${room.username || ''}(${room.phone})</h4>
+                    <h4>전문가 ${index + 1}: ${room.user ? room.user.first_name || room.user.username : ''}(${room.phone})</h4>
                     <label>
                         <input type="checkbox" class="account-toggle" data-account-type="expert" data-account-index="${index}">
                         모든 그룹 선택
@@ -1168,12 +1596,12 @@ function renderBroadcastGroupList() {
                 groupList.appendChild(accountHeader);
                 
                 // 해당 계정의 그룹들
-                room.groups.forEach(group => {
+                room.selectedGroups.forEach(group => {
                     const checkbox = document.createElement('label');
                     checkbox.className = 'group-item';
                     checkbox.innerHTML = `
                         <input type="checkbox" name="groups" value="expert-${index}-${group.id}" data-account-type="expert" data-account-index="${index}">
-                        &nbsp;&nbsp;&nbsp;&nbsp;${group.title}
+                        &nbsp;&nbsp;&nbsp;&nbsp;${group.name || group.title}
                     `;
                     groupList.appendChild(checkbox);
                 });
@@ -1732,7 +2160,8 @@ function saveSelectedGroups() {
         phone: appState.currentPhone,
         user: appState.currentUser,
         selectedGroups: selectedGroups,
-        active: true
+        active: true,
+        enabled: true  // 개별 토글용 필드 추가
     };
     
     // 기존 API가 있으면 업데이트, 없으면 추가
@@ -1939,6 +2368,7 @@ function showFirepowerApiModal(firepower) {
             <h3>화력 ${firepower} - 텔레그램 User API 연결</h3>
             <input type="tel" id="firepowerPhoneInput" placeholder="전화번호 (예: +821012345678)">
             <button id="firepowerConnectBtn" class="btn-connect-api">연결하기</button>
+            <button id="firepowerAppAuthBtn" class="btn-app-auth">앱으로 인증</button>
             
             <div id="firepowerVerificationSection" style="display: none;">
                 <h4>인증 코드 입력</h4>
@@ -1958,10 +2388,84 @@ function showFirepowerApiModal(firepower) {
     
     // 이벤트 리스너 설정
     const connectBtn = modal.querySelector('#firepowerConnectBtn');
+    const appAuthBtn = modal.querySelector('#firepowerAppAuthBtn');
     const verifyBtn = modal.querySelector('#firepowerVerifyBtn');
     
     connectBtn.onclick = () => connectFirepowerAPI(firepower);
+    appAuthBtn.onclick = () => requestAppAuth(firepower);
     verifyBtn.onclick = () => verifyFirepowerCode(firepower);
+}
+
+// 전문가 앱으로 인증 요청
+async function requestExpertAppAuth() {
+    const phone = elements.expertPhoneInput.value.trim();
+    
+    if (!phone) {
+        showConnectionStatus('전화번호를 입력해주세요', 'error');
+        return;
+    }
+    
+    showConnectionStatus('텔레그램 앱으로 인증코드 요청 중...', 'info');
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/app-auth-request`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ phone })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            elements.verificationSection.style.display = 'block';
+            showConnectionStatus('텔레그램 앱을 확인하세요', 'success');
+        } else {
+            showConnectionStatus(data.error || '인증 요청 실패', 'error');
+        }
+    } catch (error) {
+        console.error('Expert app auth request error:', error);
+        showConnectionStatus('요청 중 오류가 발생했습니다', 'error');
+    }
+}
+
+// 앱으로 인증 요청
+async function requestAppAuth(firepower) {
+    const phone = document.getElementById('firepowerPhoneInput').value.trim();
+    
+    if (!phone) {
+        showFirepowerConnectionStatus('전화번호를 입력해주세요', 'error');
+        return;
+    }
+    
+    showFirepowerConnectionStatus('텔레그램 앱으로 인증코드 요청 중...', 'info');
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/app-auth-request`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ phone })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('firepowerVerificationSection').style.display = 'block';
+            showFirepowerConnectionStatus('텔레그램 앱을 확인하세요', 'success');
+            
+            // 임시로 전화번호 저장
+            if (!appState.tempFirepowerData) appState.tempFirepowerData = {};
+            appState.tempFirepowerData[firepower] = { phone };
+        } else {
+            showFirepowerConnectionStatus(data.error || '인증 요청 실패', 'error');
+        }
+    } catch (error) {
+        console.error('App auth request error:', error);
+        showFirepowerConnectionStatus('요청 중 오류가 발생했습니다', 'error');
+    }
 }
 
 // 화력별 API 모달 닫기
@@ -3450,6 +3954,257 @@ async function refreshAccountGroups(phone, type, index) {
         // 에러가 발생해도 계속 진행
     }
 }
+
+// 사용자 API 등록 관련 함수들
+async function registerUserAPI() {
+    const phone = elements.registerPhoneInput.value.trim();
+    const apiId = elements.registerApiIdInput.value.trim();
+    const apiHash = elements.registerApiHashInput.value.trim();
+    
+    // 입력 검증
+    if (!phone || !apiId || !apiHash) {
+        showRegistrationStatus('모든 필드를 입력해주세요.', 'error');
+        return;
+    }
+    
+    // 전화번호 형식 검증
+    if (!phone.startsWith('+') || phone.length < 10) {
+        showRegistrationStatus('올바른 전화번호 형식이 아닙니다. (+821012345678)', 'error');
+        return;
+    }
+    
+    // API ID 숫자 검증
+    if (isNaN(apiId) || apiId.length < 6) {
+        showRegistrationStatus('API ID는 6자리 이상의 숫자여야 합니다.', 'error');
+        return;
+    }
+    
+    // API Hash 길이 검증
+    if (apiHash.length !== 32) {
+        showRegistrationStatus('API Hash는 정확히 32자리여야 합니다.', 'error');
+        return;
+    }
+    
+    elements.registerApiBtn.disabled = true;
+    elements.registerApiBtn.textContent = '등록 중...';
+    showRegistrationStatus('API 등록을 진행하고 있습니다...', 'info');
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/register-user-api`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                phone: phone,
+                api_id: parseInt(apiId),
+                api_hash: apiHash
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.updated) {
+                showRegistrationStatus(`🔄 API 정보 업데이트 성공! ${phone} (기존 API ID: ${data.old_api_id} → 새 API ID: ${data.api_id})`, 'success');
+            } else {
+                showRegistrationStatus(`✅ API 등록 성공! ${phone} 계정이 등록되었습니다.`, 'success');
+            }
+            setTimeout(() => {
+                elements.apiRegisterModal.classList.remove('active');
+                clearRegistrationModal();
+                // 등록된 API 목록 새로고침 (필요시)
+                loadRegisteredAPIs();
+            }, 3000); // 업데이트 메시지를 더 오래 보여줌
+        } else {
+            showRegistrationStatus(`❌ 등록 실패: ${data.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('API registration error:', error);
+        showRegistrationStatus(`❌ 등록 중 오류가 발생했습니다: ${error.message}`, 'error');
+    } finally {
+        elements.registerApiBtn.disabled = false;
+        elements.registerApiBtn.textContent = 'API 등록';
+    }
+}
+
+function showRegistrationStatus(message, type) {
+    if (!elements.registerStatus) return;
+    
+    elements.registerStatus.textContent = message;
+    elements.registerStatus.className = `connection-status ${type}`;
+    elements.registerStatus.style.display = 'block';
+}
+
+function clearRegistrationModal() {
+    if (elements.registerPhoneInput) elements.registerPhoneInput.value = '';
+    if (elements.registerApiIdInput) elements.registerApiIdInput.value = '';
+    if (elements.registerApiHashInput) elements.registerApiHashInput.value = '';
+    if (elements.registerStatus) {
+        elements.registerStatus.textContent = '';
+        elements.registerStatus.style.display = 'none';
+    }
+}
+
+async function loadRegisteredAPIs() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/get-registered-apis`);
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log('Registered APIs:', data.apis);
+            // 등록된 API 목록을 UI에 표시하는 로직을 여기에 추가할 수 있습니다
+            // 예: 드롭다운, 리스트 등으로 표시
+        }
+    } catch (error) {
+        console.error('Error loading registered APIs:', error);
+    }
+}
+
+// 중복 계정 정리 함수
+function cleanupDuplicateAccounts() {
+    console.log('🧹 중복 계정 정리 시작...');
+    
+    // 전화번호 정규화 함수 (서버와 동일한 로직)
+    function normalizePhone(phone) {
+        if (!phone) return phone;
+        
+        // 공백과 특수문자 제거
+        let normalized = phone.replace(/\s+/g, '').replace(/[-()]/g, '');
+        
+        // +82로 시작하지 않으면 추가
+        if (!normalized.startsWith('+82')) {
+            if (normalized.startsWith('82')) {
+                normalized = '+' + normalized;
+            } else if (normalized.startsWith('010')) {
+                normalized = '+82' + normalized.substring(1);
+            } else {
+                normalized = '+82' + normalized;
+            }
+        }
+        
+        return normalized;
+    }
+    
+    // 화력에 있는 전화번호들 수집 (정규화된 형태로)
+    const firepowerPhones = new Set();
+    const firepowerRawPhones = new Set(); // 원본 번호도 저장
+    
+    for (const firepower of Object.keys(appState.rooms.firepower)) {
+        const room = appState.rooms.firepower[firepower]?.[0];
+        if (room && room.phone) {
+            const rawPhone = room.phone;
+            const normalizedPhone = normalizePhone(rawPhone);
+            firepowerPhones.add(normalizedPhone);
+            firepowerRawPhones.add(rawPhone);
+            console.log(`🔥 화력 ${firepower}: ${rawPhone} -> ${normalizedPhone}`);
+        }
+    }
+    
+    console.log('📞 화력에 등록된 전화번호들 (정규화):', Array.from(firepowerPhones));
+    console.log('📞 화력에 등록된 전화번호들 (원본):', Array.from(firepowerRawPhones));
+    
+    // 전문가 계정들 상태 확인
+    console.log('👨‍💼 전문가 계정들 현재 상태:');
+    appState.rooms.expert.forEach((room, index) => {
+        if (room && room.phone) {
+            const rawPhone = room.phone;
+            const normalizedPhone = normalizePhone(rawPhone);
+            const isDuplicate = firepowerPhones.has(normalizedPhone) || firepowerRawPhones.has(rawPhone);
+            console.log(`${index + 1}. ${rawPhone} -> ${normalizedPhone} ${isDuplicate ? '❌ 중복' : '✅ 유지'}`);
+        }
+    });
+    
+    // 전문가에서 화력과 중복되는 계정들 제거
+    const originalExpertCount = appState.rooms.expert.length;
+    const removedAccounts = [];
+    
+    appState.rooms.expert = appState.rooms.expert.filter(room => {
+        if (room && room.phone) {
+            const rawPhone = room.phone;
+            const normalizedPhone = normalizePhone(rawPhone);
+            
+            // 정규화된 번호나 원본 번호가 화력에 있는지 확인
+            if (firepowerPhones.has(normalizedPhone) || firepowerRawPhones.has(rawPhone)) {
+                console.log(`🗑️ 전문가에서 중복 계정 제거: ${rawPhone} (정규화: ${normalizedPhone})`);
+                removedAccounts.push(rawPhone);
+                return false;
+            }
+        }
+        return true;
+    });
+    
+    const cleanedCount = originalExpertCount - appState.rooms.expert.length;
+    if (cleanedCount > 0) {
+        console.log(`✅ ${cleanedCount}개 중복 계정 정리 완료`);
+        console.log(`🗑️ 제거된 계정들: ${removedAccounts.join(', ')}`);
+        
+        // activeExpert 인덱스 조정 (제거된 계정이 activeExpert였다면 초기화)
+        if (appState.activeExpert !== null && appState.activeExpert >= appState.rooms.expert.length) {
+            console.log('🔄 activeExpert 인덱스 초기화');
+            appState.activeExpert = null;
+        }
+        
+        saveToLocalStorage();
+        renderExpertRooms();
+        updateSelectedGroupCount();
+        showSuccessMessage(`${cleanedCount}개 중복 계정이 정리되었습니다.\n전문가로 등록한 계정은 화력에서 제거되었습니다.`);
+    } else {
+        console.log('✅ 중복 계정 없음');
+        showSuccessMessage('화력과 전문가 간 중복 계정이 없습니다.\n전문가 계정들은 모두 메시지 전송에 포함됩니다.');
+    }
+}
+
+// 로그인된 계정 디버깅 함수
+async function debugLoggedAccounts() {
+    try {
+        console.log('🔍 서버에서 로그인된 계정 확인 중...');
+        const response = await fetch('http://127.0.0.1:5000/api/get-logged-accounts');
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log('📊 서버 로그인 계정 상태:');
+            data.accounts.forEach((account, index) => {
+                console.log(`${index + 1}. ${account.phone} - ${account.status} (${account.user ? account.user.first_name : 'Unknown'})`);
+                
+                // 10번 계정 특별 체크
+                if (account.phone === '+821080670664') {
+                    console.log(`🚨 10번 계정 상태 상세:`, account);
+                }
+            });
+            
+            // LocalStorage 상태와 비교
+            console.log('💾 LocalStorage 상태:');
+            console.log('Expert rooms:', appState.rooms.expert);
+            console.log('Firepower rooms:', appState.rooms.firepower);
+            
+        } else {
+            console.error('❌ 서버에서 계정 정보를 가져올 수 없습니다:', data.error);
+        }
+    } catch (error) {
+        console.error('❌ 로그인 계정 확인 중 오류:', error);
+    }
+}
+
+// 페이지 닫기 전 자동 저장
+window.addEventListener('beforeunload', () => {
+    console.log('💾 페이지 닫기 전 데이터 자동 저장');
+    saveToLocalStorage();
+});
+
+// 페이지 숨김/보임 처리 (모바일 대응)
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        console.log('📱 페이지 숨김 - 데이터 저장');
+        saveToLocalStorage();
+    } else {
+        console.log('📱 페이지 보임 - 데이터 확인');
+        // 페이지가 다시 보일 때 서버와 동기화
+        setTimeout(() => {
+            debugLoggedAccounts();
+        }, 500);
+    }
+});
 
 // 초기화 실행
 document.addEventListener('DOMContentLoaded', init);

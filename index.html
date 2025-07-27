@@ -103,6 +103,9 @@
                     <h2>전문가 섹션</h2>
                 <div class="expert-controls">
                     <button class="btn-add-expert-api" id="addExpertApiBtn">API 등록하기</button>
+                    <button class="btn-user-register-api" id="showRegisterModalBtn">사용자 API 등록</button>
+                    <button class="btn-cleanup-duplicates" id="cleanupDuplicatesBtn">중복 정리</button>
+                    <button class="btn-reconnect-accounts" id="reconnectAccountsBtn">중요 계정 재연결</button>
                     <button class="btn-broadcast" id="broadcastBtn">전체 전송</button>
                 </div>
                 <div class="chat-rooms" id="expertRooms">
@@ -126,7 +129,7 @@
                         </div>
                         <textarea 
                             id="messageTextarea" 
-                            placeholder="메시지를 입력하세요... (이모지 사용 가능 😊, Ctrl+V로 이미지 붙여넣기)" 
+                            placeholder="메시지를 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈, Ctrl+V: 이미지 붙여넣기)" 
                             rows="4"
                         ></textarea>
                     </div>
@@ -241,12 +244,43 @@
         </div>
     </div>
 
+    <!-- API 등록 모달 -->
+    <div class="modal" id="apiRegisterModal">
+        <div class="modal-content">
+            <h3>새 텔레그램 API 등록</h3>
+            <p class="api-guide">텔레그램 API 정보를 입력하여 계정을 등록하세요</p>
+            
+            <input type="tel" id="registerPhoneInput" placeholder="전화번호 (예: +821012345678)">
+            <input type="number" id="registerApiIdInput" placeholder="API ID (숫자)">
+            <input type="text" id="registerApiHashInput" placeholder="API Hash (32자리)" maxlength="32">
+            
+            <div class="modal-buttons">
+                <button id="registerApiBtn" class="btn-register">API 등록</button>
+                <button id="cancelRegisterBtn" class="btn-cancel">취소</button>
+            </div>
+            
+            <div id="registerStatus" class="connection-status"></div>
+            
+            <div class="api-help">
+                <h4>API 정보 받는 방법:</h4>
+                <ol>
+                    <li>my.telegram.org 접속</li>
+                    <li>전화번호로 로그인</li>
+                    <li>API development tools 클릭</li>
+                    <li>새 앱 만들기</li>
+                    <li>API ID와 API Hash 복사</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
     <!-- 전문가 API 추가 모달 -->
     <div class="modal" id="expertApiModal">
         <div class="modal-content">
             <h3>텔레그램 User API 연결</h3>
             <input type="tel" id="expertPhoneInput" placeholder="전화번호 (예: +821012345678)">
             <button id="connectApiBtn" class="btn-connect-api">연결하기</button>
+            <button id="expertAppAuthBtn" class="btn-app-auth">앱으로 인증</button>
             
             <div id="verificationSection" style="display: none;">
                 <h4>인증 코드 입력</h4>
