@@ -104,7 +104,10 @@
                 <div class="expert-controls">
                     <button class="btn-add-expert-api" id="addExpertApiBtn">API 등록하기</button>
                     <button class="btn-user-register-api" id="showRegisterModalBtn">사용자 API 등록</button>
+                    <button class="btn-api-manager" id="showApiManagerBtn">🔧 API 관리</button>
                     <button class="btn-cleanup-duplicates" id="cleanupDuplicatesBtn">중복 정리</button>
+                    <button class="btn-debug-accounts" id="debugAccountsBtn">🔍 계정 디버그</button>
+                    <button class="btn-reset-accounts" id="resetAccountsBtn">🔄 계정 재구성</button>
                     <button class="btn-reconnect-accounts" id="reconnectAccountsBtn">중요 계정 재연결</button>
                     <button class="btn-broadcast" id="broadcastBtn">전체 전송</button>
                 </div>
@@ -151,7 +154,7 @@
             <section class="firepower-section">
                 <h2>화력별 그룹방</h2>
                 <div class="firepower-controls" style="text-align: center; margin-bottom: 15px;">
-                    <button class="btn-auto-setup" id="autoSetupBtn" style="background-color: #ff6b35; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">🚀 화력 1-8 자동 등록</button>
+                    <button class="btn-auto-setup" id="autoSetupBtn" style="background-color: #ff6b35; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">📋 모든 화력 자동 배치</button>
                 </div>
                 <div class="firepower-tabs">
                     <div class="firepower-grid">
@@ -385,6 +388,85 @@
             <div class="modal-actions">
                 <button id="sendProfitBtn" class="btn-send-profit">📤 수익인증 전송</button>
                 <button id="cancelProfitBtn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- API 관리 모달 -->
+    <div class="modal" id="apiManagerModal">
+        <div class="modal-content api-manager-modal">
+            <h3>🔧 API 관리</h3>
+            
+            <div class="api-manager-tabs">
+                <button class="tab-btn active" data-tab="expert">전문가 API</button>
+                <button class="tab-btn" data-tab="firepower">화력 API</button>
+            </div>
+            
+            <!-- 전문가 API 관리 -->
+            <div class="api-tab-content active" id="expertApiTab">
+                <div class="api-section-header">
+                    <h4>전문가 섹션 API 목록</h4>
+                    <button class="btn-add-api" id="addExpertApiConfig">+ 새 API 추가</button>
+                </div>
+                <div class="api-list" id="expertApiList">
+                    <!-- 전문가 API 목록이 동적으로 생성됨 -->
+                </div>
+            </div>
+            
+            <!-- 화력 API 관리 -->
+            <div class="api-tab-content" id="firepowerApiTab">
+                <div class="api-section-header">
+                    <h4>화력 섹션 API 목록</h4>
+                    <button class="btn-add-api" id="addFirepowerApiConfig">+ 새 API 추가</button>
+                </div>
+                <div class="api-list" id="firepowerApiList">
+                    <!-- 화력 API 목록이 동적으로 생성됨 -->
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="saveApiConfigBtn" class="btn-save">저장</button>
+                <button id="cancelApiManagerBtn" class="btn-cancel">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- API 추가/수정 모달 -->
+    <div class="modal" id="apiEditModal">
+        <div class="modal-content">
+            <h3 id="apiEditTitle">API 추가</h3>
+            
+            <div class="form-group">
+                <label for="apiEditPhone">전화번호</label>
+                <input type="tel" id="apiEditPhone" placeholder="+821012345678">
+            </div>
+            
+            <div class="form-group">
+                <label for="apiEditId">API ID</label>
+                <input type="number" id="apiEditId" placeholder="12345678">
+            </div>
+            
+            <div class="form-group">
+                <label for="apiEditHash">API Hash</label>
+                <input type="text" id="apiEditHash" placeholder="32자리 해시">
+            </div>
+            
+            <div class="form-group">
+                <label for="apiEditType">배치 타입</label>
+                <select id="apiEditType">
+                    <option value="firepower">화력 (기본)</option>
+                    <option value="expert">전문가</option>
+                </select>
+            </div>
+            
+            <div class="form-group" id="firepowerNumberGroup" style="display: none;">
+                <label for="apiEditFirepowerNumber">화력 번호</label>
+                <input type="number" id="apiEditFirepowerNumber" min="1" max="30" placeholder="1-30">
+            </div>
+            
+            <div class="modal-actions">
+                <button id="saveApiEditBtn" class="btn-save">저장</button>
+                <button id="cancelApiEditBtn" class="btn-cancel">취소</button>
             </div>
         </div>
     </div>

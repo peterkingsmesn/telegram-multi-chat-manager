@@ -130,6 +130,109 @@ h2 {
     color: white;
 }
 
+.btn-debug-accounts,
+.btn-reset-accounts {
+    background-color: #6c757d;
+    color: white;
+    font-size: 12px;
+    margin: 2px;
+}
+
+.btn-reset-accounts {
+    background-color: #dc3545;
+}
+
+.btn-debug-accounts:hover {
+    background-color: #5a6268;
+}
+
+.btn-reset-accounts:hover {
+    background-color: #c82333;
+}
+
+.btn-move-to-expert {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-top: 5px;
+}
+
+.btn-move-to-expert:hover {
+    background-color: #218838;
+}
+
+.btn-move-to-firepower {
+    background-color: #ff6b35;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.btn-move-to-firepower:hover {
+    background-color: #e55a2b;
+}
+
+.firepower-actions {
+    margin-top: 5px;
+    text-align: center;
+}
+
+.account-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    background-color: #f9f9f9;
+}
+
+.account-info {
+    flex: 1;
+}
+
+.account-name {
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.account-phone {
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 2px;
+}
+
+.account-groups {
+    color: #999;
+    font-size: 11px;
+}
+
+.account-actions {
+    margin-left: 10px;
+}
+
+.account-type-select {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.no-accounts {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+    font-style: italic;
+}
+
 .btn-reconnect-accounts {
     background-color: #ff9800;
     color: white;
@@ -1111,6 +1214,7 @@ h2 {
     color: #333;
 }
 
+
 .template-item {
     display: flex;
     gap: 5px;
@@ -1653,6 +1757,7 @@ h2 {
     padding: 6px;
     background-color: #f9f9f9;
     min-height: 0;
+    max-height: 300px;
 }
 
 .firepower-account-item {
@@ -1751,4 +1856,236 @@ h2 {
     color: #666;
     font-style: italic;
     padding: 20px;
+}
+
+/* API 관리 스타일 */
+.btn-api-manager {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 2px;
+}
+
+.btn-api-manager:hover {
+    background-color: #5a6268;
+}
+
+.api-manager-modal {
+    width: 90%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.api-manager-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.api-manager-tabs .tab-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    color: #6c757d;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.api-manager-tabs .tab-btn.active {
+    color: #1a73e8;
+    border-bottom-color: #1a73e8;
+    background-color: rgba(26, 115, 232, 0.1);
+}
+
+.api-manager-tabs .tab-btn:hover {
+    background-color: rgba(26, 115, 232, 0.05);
+}
+
+.api-tab-content {
+    display: none;
+}
+
+.api-tab-content.active {
+    display: block;
+}
+
+.api-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.api-section-header h4 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.btn-add-api {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-add-api:hover {
+    background-color: #218838;
+}
+
+.api-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.api-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    margin-bottom: 10px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+}
+
+.api-item:hover {
+    background-color: #e9ecef;
+}
+
+.api-item-info {
+    flex: 1;
+}
+
+.api-item-phone {
+    font-weight: bold;
+    color: #1a73e8;
+    margin-bottom: 5px;
+}
+
+.api-item-details {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.api-item-type {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-right: 10px;
+}
+
+.api-item-type.expert {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.api-item-type.firepower {
+    background-color: #fff3e0;
+    color: #f57c00;
+}
+
+.api-item-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-edit-api {
+    background-color: #ffc107;
+    color: #212529;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.btn-edit-api:hover {
+    background-color: #e0a800;
+}
+
+.btn-delete-api {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.btn-delete-api:hover {
+    background-color: #c82333;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+}
+
+.btn-save {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-right: 10px;
+}
+
+.btn-save:hover {
+    background-color: #218838;
+}
+
+.btn-cancel {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-cancel:hover {
+    background-color: #5a6268;
 }
