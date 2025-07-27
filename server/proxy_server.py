@@ -13,6 +13,7 @@ import socks
 nest_asyncio.apply()
 
 app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False  # 한글 JSON 지원
 CORS(app)  # 모든 CORS 허용
 
 # 텔레그램 API 정보 (계정별 설정)
@@ -27,7 +28,8 @@ API_CONFIGS = {
     '+821039040988': {'api_id': 24304512, 'api_hash': '0ca82ad2de71545de2f9846e3a0192da'},
     '+821084095699': {'api_id': 24530799, 'api_hash': '097062bc50fc6c063dde63ace30acbf1'},  # 8번 화력
     '+821083554890': {'api_id': 29965481, 'api_hash': 'afeb4612d720ab8d2b211baa0ca3475f'},   # 9번 화력
-    '+821080670664': {'api_id': 26633894, 'api_hash': '5b01cdef060589ef2e299c463ec3f9a7'}   # 새 계정
+    '+821080670664': {'api_id': 26633894, 'api_hash': '5b01cdef060589ef2e299c463ec3f9a7'},   # 새 계정
+    '+821077871056': {'api_id': 26187602, 'api_hash': 'dd558e882d2719eac3481f13743562e4'}    # 11번 계정
 }
 
 # 기본 API (기존 계정용)
@@ -117,6 +119,13 @@ PROXY_ACCOUNT_MAPPING = {
         'port': 12324,
         'username': '14a939d12d002',
         'password': 'e300685af2'
+    },
+    '+821077871056': {
+        'proxy_id': 'proxy11',
+        'addr': '88.209.253.67',
+        'port': 12324,
+        'username': '14a939d12d002',
+        'password': 'e300685af2'
     }
 }
 
@@ -143,31 +152,113 @@ clients = {}
 phone_code_hashes = {}
 
 def get_proxy_for_phone(phone):
-    """전화번호에 할당된 프록시 찾기 (1:1 매칭)"""
-    # 신규 API 계정의 경우 고정 매칭
-    if phone in PROXY_ACCOUNT_MAPPING:
-        proxy_info = PROXY_ACCOUNT_MAPPING[phone]
-        return proxy_info['proxy_id'], proxy_info
+    """전화번호에 할당된 프록시 찾기 (1:1 매칭) - 개선된 에러 처리"""
+    try:
+        print(f"[PROXY] Looking for proxy for phone: {phone}")
+        
+        # 신규 API 계정의 경우 고정 매칭
+        if phone in PROXY_ACCOUNT_MAPPING:
+            proxy_info = PROXY_ACCOUNT_MAPPING[phone]
+            print(f"[PROXY] Found dedicated proxy for {phone}: {proxy_info['proxy_id']}")
+            return proxy_info['proxy_id'], proxy_info
+        
+        # 기존 계정의 경우 PROXIES에서 할당 확인
+        for proxy_id, proxy_info in PROXIES.items():
+            if phone in proxy_info['accounts']:
+                print(f"[PROXY] Found existing proxy assignment for {phone}: {proxy_id}")
+                return proxy_id, proxy_info
+        
+        # 새로 할당 (가장 적게 사용된 프록시 선택)
+        if not PROXIES:
+            print(f"[PROXY] ERROR: No proxies available in PROXIES pool")
+            return None, None
+            
+        min_accounts = float('inf')
+        selected_proxy_id = None
+        
+        for proxy_id, proxy_info in PROXIES.items():
+            account_count = len(proxy_info['accounts'])
+            print(f"[PROXY] Proxy {proxy_id}: {account_count} accounts")
+            if account_count < min_accounts:
+                min_accounts = account_count
+                selected_proxy_id = proxy_id
+        
+        if selected_proxy_id:
+            PROXIES[selected_proxy_id]['accounts'].append(phone)
+            print(f"[PROXY] Assigned new proxy {selected_proxy_id} to {phone}")
+            return selected_proxy_id, PROXIES[selected_proxy_id]
+        
+        print(f"[PROXY] ERROR: Failed to allocate proxy for {phone}")
+        return None, None
+        
+    except Exception as e:
+        print(f"[PROXY] ERROR: Exception in get_proxy_for_phone for {phone}: {str(e)}")
+        import traceback
+        print(f"[PROXY] Traceback: {traceback.format_exc()}")
+        return None, None
+
+def handle_locked_session(phone):
+    """잠긴 세션 파일 처리 및 복구"""
+    import sqlite3
+    import shutil
+    import time
     
-    # 기존 계정의 경우 PROXIES에서 할당
-    for proxy_id, proxy_info in PROXIES.items():
-        if phone in proxy_info['accounts']:
-            return proxy_id, proxy_info
+    phone_clean = phone.replace('+', '').replace(' ', '')
+    original_session = os.path.join(SESSIONS_DIR, f'{phone_clean}.session')
     
-    # 새로 할당 (가장 적게 사용된 프록시 선택)
-    min_accounts = float('inf')
-    selected_proxy_id = None
+    print(f"[SESSION] Handling potentially locked session for {phone}")
     
-    for proxy_id, proxy_info in PROXIES.items():
-        if len(proxy_info['accounts']) < min_accounts:
-            min_accounts = len(proxy_info['accounts'])
-            selected_proxy_id = proxy_id
+    # 1. 기존 세션 파일 잠금 상태 확인
+    try:
+        # 빠른 읽기 전용 테스트
+        conn = sqlite3.connect(original_session, timeout=0.5)
+        conn.execute('SELECT COUNT(*) FROM sqlite_master')
+        conn.close()
+        print(f"[SESSION] Original session file is accessible: {original_session}")
+        return original_session
+    except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+        if 'locked' in str(e).lower():
+            print(f"[SESSION] Session file is locked, attempting recovery...")
+        else:
+            print(f"[SESSION] Session file error: {str(e)}")
+    except Exception as e:
+        print(f"[SESSION] Unexpected error: {str(e)}")
     
-    if selected_proxy_id:
-        PROXIES[selected_proxy_id]['accounts'].append(phone)
-        return selected_proxy_id, PROXIES[selected_proxy_id]
+    # 2. 복구 시도: 백업 파일 확인
+    backup_session = original_session + '.backup'
+    if os.path.exists(backup_session):
+        print(f"[SESSION] Found backup session, attempting to restore...")
+        try:
+            # 백업에서 복구
+            recovered_session = os.path.join(SESSIONS_DIR, f'{phone_clean}_recovered.session')
+            shutil.copy2(backup_session, recovered_session)
+            
+            # 복구된 파일 테스트
+            conn = sqlite3.connect(recovered_session, timeout=1)
+            conn.execute('SELECT COUNT(*) FROM sqlite_master')
+            conn.close()
+            
+            print(f"[SESSION] Successfully recovered session: {recovered_session}")
+            return recovered_session
+        except Exception as recovery_error:
+            print(f"[SESSION] Recovery failed: {str(recovery_error)}")
     
-    return None, None
+    # 3. 최후 수단: 새 세션 생성 (하지만 고정된 이름 사용)
+    fixed_session = os.path.join(SESSIONS_DIR, f'{phone_clean}_fixed.session')
+    print(f"[SESSION] Creating fixed session path: {fixed_session}")
+    
+    # 기존 fixed 세션이 있다면 재사용
+    if os.path.exists(fixed_session):
+        try:
+            conn = sqlite3.connect(fixed_session, timeout=1)
+            conn.execute('SELECT COUNT(*) FROM sqlite_master')
+            conn.close()
+            print(f"[SESSION] Reusing existing fixed session: {fixed_session}")
+            return fixed_session
+        except:
+            print(f"[SESSION] Fixed session also locked, will create new one")
+    
+    return fixed_session
 
 def get_or_create_loop():
     """현재 스레드의 이벤트 루프를 가져오거나 생성"""
@@ -197,10 +288,15 @@ def connect():
     print(f"[CONNECT] Proxy ID: {proxy_id}, Proxy Info: {proxy_info}")
     
     if not proxy_info:
-        print(f"[CONNECT] ERROR: No proxy available for {phone}")
-        return jsonify({'success': False, 'error': '사용 가능한 프록시가 없습니다'}), 500
+        print(f"[CONNECT] WARNING: No proxy available for {phone}, using direct connection")
+        # 프록시가 없어도 직접 연결로 진행
+        proxy_info = {'addr': 'direct', 'port': None}
     
-    session_path = os.path.join(SESSIONS_DIR, phone.replace('+', '').replace(' ', ''))
+    # 잠금 문제가 있는 계정들의 스마트 세션 처리
+    if phone in ['+821080670664', '+821077871056']:
+        session_path = handle_locked_session(phone)
+    else:
+        session_path = os.path.join(SESSIONS_DIR, phone.replace('+', '').replace(' ', ''))
     print(f"[CONNECT] Session path: {session_path}")
     
     try:
@@ -211,9 +307,11 @@ def connect():
             try:
                 if clients[phone].is_connected():
                     loop.run_until_complete(clients[phone].disconnect())
-            except:
-                pass
+                print(f"[CONNECT] Disconnected existing client for {phone}")
+            except Exception as disconnect_error:
+                print(f"[CONNECT] Error disconnecting client for {phone}: {str(disconnect_error)}")
             del clients[phone]
+            print(f"[CONNECT] Removed client cache for {phone}")
         
         # 새 클라이언트 생성
         # 해당 전화번호의 API 설정 가져오기
@@ -224,36 +322,30 @@ def connect():
             api_id = DEFAULT_API_ID
             api_hash = DEFAULT_API_HASH
         
-        # 새 계정: 등록된 세션이 있으면 프록시 사용, 없으면 직접 연결
-        if phone == '+821080670664':
-            session_exists = os.path.exists(session_path + '.session')
-            if session_exists:
-                print(f"[CONNECT] Using proxy connection for registered account {phone}")
-                proxy = (socks.SOCKS5, proxy_info['addr'], proxy_info['port'], 
-                        True, proxy_info['username'], proxy_info['password'])
-                clients[phone] = TelegramClient(
-                    session_path, 
-                    api_id, 
-                    api_hash,
-                    proxy=proxy
-                )
-            else:
-                print(f"[CONNECT] Using direct connection for new account registration {phone}")
-                clients[phone] = TelegramClient(
-                    session_path, 
-                    api_id, 
-                    api_hash
-                )
-        else:
-            # 기존 계정들은 프록시 사용
-            proxy = (socks.SOCKS5, proxy_info['addr'], proxy_info['port'], 
-                    True, proxy_info['username'], proxy_info['password'])
-            print(f"[CONNECT] Using proxy connection for existing account {phone}")
+        # 일관된 연결 전략: 모든 계정에 동일한 로직 적용
+        session_exists = os.path.exists(session_path + '.session')
+        use_proxy = proxy_info['addr'] != 'direct' and session_exists
+        
+        # 세션이 없는 새 계정이거나 프록시가 없는 경우 직접 연결
+        if not session_exists or proxy_info['addr'] == 'direct':
+            print(f"[CONNECT] Using direct connection for {phone} (new account or no proxy)")
             clients[phone] = TelegramClient(
                 session_path, 
                 api_id, 
                 api_hash,
-                proxy=proxy
+                timeout=10  # 10초 타임아웃 추가
+            )
+        else:
+            # 기존 세션이 있고 프록시가 사용 가능한 계정들은 프록시 사용
+            proxy = (socks.SOCKS5, proxy_info['addr'], proxy_info['port'], 
+                    True, proxy_info['username'], proxy_info['password'])
+            print(f"[CONNECT] Using proxy connection for existing account {phone} via {proxy_info['addr']}")
+            clients[phone] = TelegramClient(
+                session_path, 
+                api_id, 
+                api_hash,
+                proxy=proxy,
+                timeout=10  # 10초 타임아웃 추가
             )
         
         async def send_code():
@@ -280,15 +372,27 @@ def connect():
                 }
             
             print(f"[SEND_CODE] Sending SMS code request to {phone}...")
-            result = await clients[phone].send_code_request(phone)
-            print(f"[SEND_CODE] SMS code request successful! Hash: {result.phone_code_hash[:20]}...")
-            return {
-                'success': True, 
-                'message': f'인증 코드가 {phone}로 전송되었습니다', 
-                'require_code': True, 
-                'proxy_info': f'프록시: {proxy_info["addr"]} (계정별 독립)',
-                'hash': result.phone_code_hash
-            }
+            try:
+                result = await clients[phone].send_code_request(phone)
+                print(f"[SEND_CODE] SMS code request successful! Hash: {result.phone_code_hash[:20]}...")
+                proxy_desc = f'프록시: {proxy_info["addr"]}' if proxy_info['addr'] != 'direct' else '직접 연결'
+                return {
+                    'success': True, 
+                    'message': f'인증 코드가 {phone}로 전송되었습니다', 
+                    'require_code': True, 
+                    'proxy_info': proxy_desc,
+                    'hash': result.phone_code_hash
+                }
+            except Exception as sms_error:
+                print(f"[SEND_CODE] ERROR: SMS request failed for {phone}: {str(sms_error)}")
+                print(f"[SEND_CODE] Error type: {type(sms_error).__name__}")
+                return {
+                    'success': False,
+                    'error': f'SMS 코드 요청 실패: {str(sms_error)}',
+                    'error_type': type(sms_error).__name__,
+                    'phone': phone,
+                    'proxy_info': f'프록시: {proxy_info["addr"]}' if proxy_info['addr'] != 'direct' else '직접 연결'
+                }
         
         result = loop.run_until_complete(send_code())
         print(f"[CONNECT] Result: {result}")
@@ -299,11 +403,29 @@ def connect():
         return jsonify(result)
         
     except Exception as e:
-        print(f"[CONNECT] ERROR: {str(e)}")
-        print(f"[CONNECT] Error type: {type(e).__name__}")
+        error_type = type(e).__name__
+        error_message = str(e)
+        print(f"[CONNECT] ERROR: {error_message}")
+        print(f"[CONNECT] Error type: {error_type}")
         import traceback
         print(f"[CONNECT] Traceback: {traceback.format_exc()}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        
+        # 에러 유형별 구체적인 메시지 제공
+        user_message = f"연결 실패: {error_message}"
+        if "PhoneNumberInvalidError" in error_type:
+            user_message = "유효하지 않은 전화번호입니다"
+        elif "FloodWaitError" in error_type:
+            user_message = "요청이 너무 많습니다. 잠시 후 다시 시도해주세요"
+        elif "ConnectionError" in error_type or "ProxyError" in error_type:
+            user_message = f"네트워크 연결 오류 (프록시: {proxy_info.get('addr', 'unknown')})"
+        
+        return jsonify({
+            'success': False, 
+            'error': user_message,
+            'error_type': error_type,
+            'phone': phone,
+            'proxy_info': f'프록시: {proxy_info.get("addr", "unknown")}' if proxy_info else '프록시 없음'
+        }), 500
 
 @app.route('/api/verify', methods=['POST'])
 def verify():
@@ -444,7 +566,19 @@ def get_groups():
 def send_message():
     global clients
     
-    data = request.json
+    try:
+        # UTF-8 인코딩 처리
+        if request.is_json:
+            data = request.get_json(force=True)
+        else:
+            # 원시 데이터를 UTF-8로 디코딩 시도
+            raw_data = request.get_data(as_text=True)
+            import json
+            data = json.loads(raw_data)
+    except Exception as encoding_error:
+        print(f"[SEND_MESSAGE] JSON 파싱 오류: {str(encoding_error)}")
+        return jsonify({'success': False, 'error': f'JSON 파싱 오류: {str(encoding_error)}'}), 400
+    
     print(f"[SEND_MESSAGE] Received request: {data}")
     
     phone = data.get('phone')
@@ -696,6 +830,11 @@ def auto_load_sessions():
             # 파일명에서 전화번호 추출
             phone_number = '+' + session_file.replace('.session', '')
             
+            # 잠긴 계정 파일들 건너뛰기 (스마트 세션 처리 대상)
+            if phone_number in ['+821080670664', '+821077871056']:
+                print(f"⚠️ Skipping locked session for {phone_number} (smart session handling)")
+                continue
+            
             # API 설정 찾기
             if phone_number in API_CONFIGS:
                 api_id = API_CONFIGS[phone_number]['api_id']
@@ -709,15 +848,15 @@ def auto_load_sessions():
             
             session_path = os.path.join(SESSIONS_DIR, session_file.replace('.session', ''))
             
-            # 클라이언트 생성 (프록시 있으면 사용)
-            if proxy_info and phone_number != '+821080670664':
+            # 클라이언트 생성 (기존 세션은 모두 프록시 사용)
+            if proxy_info:
                 proxy = (socks.SOCKS5, proxy_info['addr'], proxy_info['port'], 
                         True, proxy_info['username'], proxy_info['password'])
                 clients[phone_number] = TelegramClient(session_path, api_id, api_hash, proxy=proxy)
+                print(f"✅ Loaded session for {phone_number} with proxy {proxy_info['addr']}")
             else:
                 clients[phone_number] = TelegramClient(session_path, api_id, api_hash)
-            
-            print(f"✅ Loaded session for {phone_number}")
+                print(f"✅ Loaded session for {phone_number} with direct connection")
             
         except Exception as e:
             print(f"❌ Failed to load {session_file}: {str(e)}")
@@ -725,7 +864,31 @@ def auto_load_sessions():
     print(f"Auto-loaded {len(clients)} sessions")
     print("=======================================\n")
 
+def graceful_shutdown():
+    """서버 종료 시 세션 정리"""
+    print("\n[SHUTDOWN] Cleaning up sessions...")
+    
+    for phone, client in clients.items():
+        try:
+            if client.is_connected():
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(client.disconnect())
+                print(f"[SHUTDOWN] Disconnected {phone}")
+        except Exception as e:
+            print(f"[SHUTDOWN] Error disconnecting {phone}: {str(e)}")
+    
+    print("[SHUTDOWN] Session cleanup completed")
+
 if __name__ == '__main__':
+    import signal
+    import atexit
+    
+    # 종료 시 정리 함수 등록
+    atexit.register(graceful_shutdown)
+    signal.signal(signal.SIGTERM, lambda signum, frame: graceful_shutdown())
+    
     print("=" * 50)
     print("Telegram API Server - Proxy Version")
     print("http://localhost:5000")
@@ -737,4 +900,8 @@ if __name__ == '__main__':
     # 기존 세션 자동 로드
     auto_load_sessions()
     
-    app.run(debug=True, port=5000, threaded=False)
+    try:
+        app.run(debug=True, port=5000, threaded=False)
+    except KeyboardInterrupt:
+        print("\n[SERVER] Received interrupt signal")
+        graceful_shutdown()
