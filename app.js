@@ -839,7 +839,7 @@ async function sendMessage() {
                 }
                 
                 // 전송 간격
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 600));
             }
         } else {
             // 텍스트만 전송
@@ -889,7 +889,7 @@ async function sendMessage() {
                 }
                 
                 // 전송 간격
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 600));
             }
         }
         
@@ -1429,7 +1429,7 @@ async function reconnectMissingAccounts() {
             }
             
             // 연결 시도 간 대기
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 600));
         }
         
         // UI 업데이트
@@ -1916,7 +1916,7 @@ async function sendBroadcast() {
                 }
                 
                 // 계정간 전송 간격
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise(resolve => setTimeout(resolve, 600));
             }
         } else {
             // 텍스트 메시지만 있는 경우
@@ -1954,7 +1954,7 @@ async function sendBroadcast() {
                 }
                 
                 // 계정간 전송 간격
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise(resolve => setTimeout(resolve, 600));
             }
         }
         
@@ -2226,8 +2226,89 @@ async function verifyTelegramCode() {
             setTimeout(() => {
                 loadTelegramGroups();
             }, 500);
+        } else if (data.require_password) {
+            // 2FA 비밀번호 필요
+            showConnectionStatus(data.message, 'info');
+            showPasswordSection();
         } else {
             showConnectionStatus(data.error || '인증 실패', 'error');
+        }
+    } catch (error) {
+        showConnectionStatus('서버 연결 오류: ' + error.message, 'error');
+    }
+}
+
+// 2FA 비밀번호 섹션 표시
+function showPasswordSection() {
+    const passwordSection = document.createElement('div');
+    passwordSection.id = 'passwordSection';
+    passwordSection.innerHTML = `
+        <div style="margin-top: 15px;">
+            <input type="password" id="telegramPassword" placeholder="2단계 인증 비밀번호" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <button id="verifyPasswordBtn" class="btn-connect-api" style="width: 100%;">비밀번호 확인</button>
+        </div>
+    `;
+    
+    // 기존 passwordSection 제거 후 추가
+    const existing = document.getElementById('passwordSection');
+    if (existing) existing.remove();
+    
+    elements.verificationSection.appendChild(passwordSection);
+    
+    // 비밀번호 확인 버튼 이벤트
+    document.getElementById('verifyPasswordBtn').addEventListener('click', verifyTelegramPassword);
+    
+    // 엔터키 지원
+    document.getElementById('telegramPassword').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            verifyTelegramPassword();
+        }
+    });
+}
+
+// 2FA 비밀번호 확인
+async function verifyTelegramPassword() {
+    const password = document.getElementById('telegramPassword')?.value.trim();
+    
+    if (!password) {
+        showConnectionStatus('비밀번호를 입력해주세요', 'error');
+        return;
+    }
+    
+    showConnectionStatus('2FA 인증 중...', 'info');
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/verify-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                phone: appState.currentPhone,
+                password 
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showConnectionStatus(`2FA 인증 성공! 사용자: ${data.user.first_name}`, 'success');
+            
+            // UI 정리
+            document.getElementById('passwordSection')?.remove();
+            elements.verificationSection.style.display = 'none';
+            elements.testConnectionBtn.style.display = 'inline-block';
+            elements.loadGroupsBtn.style.display = 'inline-block';
+            
+            // 사용자 정보 저장
+            appState.currentUser = data.user;
+            
+            // 자동으로 그룹 목록 불러오기
+            setTimeout(() => {
+                loadTelegramGroups();
+            }, 500);
+        } else {
+            showConnectionStatus(data.error || '2FA 인증 실패', 'error');
         }
     } catch (error) {
         showConnectionStatus('서버 연결 오류: ' + error.message, 'error');
@@ -2539,7 +2620,7 @@ function showFirepowerApiModal(firepower) {
     modal.innerHTML = `
         <div class="modal-content">
             <h3>화력 ${firepower} - 텔레그램 User API 연결</h3>
-            <input type="tel" id="firepowerPhoneInput" placeholder="전화번호 (예: +821012345678)">
+            <input type="tel" id="firepowerPhoneInput" placeholder="전화번호 (예: +1234567890, +821012345678)">
             <button id="firepowerConnectBtn" class="btn-connect-api">연결하기</button>
             <button id="firepowerAppAuthBtn" class="btn-app-auth">앱으로 인증</button>
             
@@ -2773,28 +2854,36 @@ async function verifyFirepowerCode(firepower) {
         if (data.success) {
             // 화력별 정보 저장
             const firepowerData = appState.rooms.firepower[firepower];
-            if (!firepowerData || !firepowerData[0]) return;
-            const room = firepowerData[0];
-            room.phone = phone;
-            room.user = data.user;
-            room.active = true;
-            
-            showFirepowerConnectionStatus(`연결 성공! ${data.user.first_name}`, 'success');
-            
-            // 임시 데이터 삭제
-            delete appState.tempFirepowerData[firepower];
-            
-            setTimeout(() => {
-                closeFirepowerApiModal();
-                renderFirepowerRooms(firepower);
-                renderFirepowerAccountsList(); // 화력 리스트 업데이트
-                saveToLocalStorage();
-                // 자동으로 그룹 목록 불러오기
-                loadGroupsForFirepower(firepower);
-            }, 1000);
+        } else if (data.require_password) {
+            // 2FA 비밀번호 필요
+            showFirepowerConnectionStatus(data.message, 'info');
+            showFirepowerPasswordSection(firepower);
+            return;
         } else {
-            showFirepowerConnectionStatus(data.error || '인증 실패', 'error');
+            showFirepowerConnectionStatus(`인증 실패: ${data.error}`, 'error');
+            return;
         }
+        
+        // 성공 시 처리
+        if (!firepowerData || !firepowerData[0]) return;
+        const room = firepowerData[0];
+        room.phone = phone;
+        room.user = data.user;
+        room.active = true;
+        
+        showFirepowerConnectionStatus(`연결 성공! ${data.user.first_name}`, 'success');
+        
+        // 임시 데이터 삭제
+        delete appState.tempFirepowerData[firepower];
+        
+        setTimeout(() => {
+            closeFirepowerApiModal();
+            renderFirepowerRooms(firepower);
+            renderFirepowerAccountsList(); // 화력 리스트 업데이트
+            saveToLocalStorage();
+            // 자동으로 그룹 목록 불러오기
+            loadGroupsForFirepower(firepower);
+        }, 1000);
     } catch (error) {
         showFirepowerConnectionStatus('서버 연결 오류: ' + error.message, 'error');
     }
@@ -2835,22 +2924,132 @@ function changeFirepowerApi(firepower) {
 }
 
 // 화력별 API 삭제
-function deleteFirepowerApi(firepower) {
+async function deleteFirepowerApi(firepower) {
     const room = appState.rooms.firepower[firepower]?.[0];
     if (!room || !room.phone) {
         alert('삭제할 API가 없습니다.');
         return;
     }
     
-    if (confirm(`화력 ${firepower}의 API 연결을 삭제하시겠습니까?\n연결된 계정: ${room.user?.first_name || room.phone}`)) {
-        // 정보 삭제
-        room.phone = null;
-        room.user = null;
-        room.selectedGroups = [];
-        room.active = false;
+    if (confirm(`화력 ${firepower}의 API 연결을 삭제하시겠습니까?\n연결된 계정: ${room.user?.first_name || room.phone}\n\n⚠️ 서버에서도 완전히 삭제됩니다.`)) {
+        try {
+            // 서버에서 API 삭제
+            const response = await fetch('/api/delete-user-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: room.phone })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // 로컬 정보 삭제
+                room.phone = null;
+                room.user = null;
+                room.selectedGroups = [];
+                room.active = false;
+                
+                saveToLocalStorage();
+                renderFirepowerRooms(firepower);
+                updateFirepowerCounts();
+                
+                console.log(`✅ 화력 ${firepower} API 완전 삭제 완료:`, result);
+                alert(`화력 ${firepower} API가 서버에서 완전히 삭제되었습니다.\n삭제된 세션 파일: ${result.removed_files?.length || 0}개`);
+            } else {
+                console.error('❌ API 삭제 실패:', result.error);
+                alert(`API 삭제 실패: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('❌ API 삭제 요청 오류:', error);
+            alert(`API 삭제 요청 중 오류가 발생했습니다: ${error.message}`);
+        }
+    }
+}
+
+// 화력용 2FA 비밀번호 섹션 표시
+function showFirepowerPasswordSection(firepower) {
+    const verificationSection = document.getElementById('firepowerVerificationSection');
+    if (!verificationSection) return;
+    
+    const passwordSection = document.createElement('div');
+    passwordSection.id = 'firepowerPasswordSection';
+    passwordSection.innerHTML = `
+        <div style="margin-top: 15px;">
+            <input type="password" id="firepowerPassword" placeholder="2단계 인증 비밀번호" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <button id="verifyFirepowerPasswordBtn" class="btn-connect-api" style="width: 100%;">비밀번호 확인</button>
+        </div>
+    `;
+    
+    // 기존 passwordSection 제거 후 추가
+    const existing = document.getElementById('firepowerPasswordSection');
+    if (existing) existing.remove();
+    
+    verificationSection.appendChild(passwordSection);
+    
+    // 비밀번호 확인 버튼 이벤트
+    document.getElementById('verifyFirepowerPasswordBtn').addEventListener('click', () => verifyFirepowerPassword(firepower));
+    
+    // 엔터키 지원
+    document.getElementById('firepowerPassword').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            verifyFirepowerPassword(firepower);
+        }
+    });
+}
+
+// 화력용 2FA 비밀번호 확인
+async function verifyFirepowerPassword(firepower) {
+    const password = document.getElementById('firepowerPassword')?.value.trim();
+    
+    if (!password) {
+        showFirepowerConnectionStatus('비밀번호를 입력해주세요', 'error');
+        return;
+    }
+    
+    const phone = appState.tempFirepowerData?.[firepower]?.phone;
+    if (!phone) {
+        showFirepowerConnectionStatus('전화번호 정보가 없습니다', 'error');
+        return;
+    }
+    
+    showFirepowerConnectionStatus('2FA 인증 중...', 'info');
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/verify-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ phone, password })
+        });
         
-        saveToLocalStorage();
-        renderFirepowerRooms(firepower);
+        const data = await response.json();
+        
+        if (data.success) {
+            // 화력별 정보 저장
+            const firepowerData = appState.rooms.firepower[firepower];
+            if (!firepowerData || !firepowerData[0]) return;
+            
+            const room = firepowerData[0];
+            room.phone = phone;
+            room.user = data.user;
+            room.active = true;
+            
+            showFirepowerConnectionStatus(`2FA 인증 성공! 사용자: ${data.user.first_name}`, 'success');
+            
+            // UI 정리 및 저장
+            document.getElementById('firepowerPasswordSection')?.remove();
+            saveToLocalStorage();
+            renderFirepowerRooms(firepower);
+            closeModal();
+            updateFirepowerCounts();
+            
+            console.log(`✅ 화력 ${firepower} 2FA 인증 완료:`, data.user);
+        } else {
+            showFirepowerConnectionStatus(data.error || '2FA 인증 실패', 'error');
+        }
+    } catch (error) {
+        showFirepowerConnectionStatus('서버 연결 오류: ' + error.message, 'error');
     }
 }
 
@@ -3190,17 +3389,36 @@ async function startAutoSetup() {
     console.log('화력 1-8번 자동 배치 시작');
     
     try {
-        // 서버에서 로그인된 계정 목록 가져오기
-        const response = await fetch(`${API_BASE_URL}/get-logged-accounts`);
-        const data = await response.json();
+        // 먼저 서버에서 로그인된 계정 목록 가져오기 시도
+        let loggedAccounts = [];
         
-        if (!data.success || !data.accounts || data.accounts.length === 0) {
-            console.log('서버에 로그인된 계정이 없습니다.');
+        try {
+            const response = await Promise.race([
+                fetch(`${API_BASE_URL}/get-logged-accounts`),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+            ]);
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.accounts && data.accounts.length > 0) {
+                    loggedAccounts = data.accounts.filter(acc => acc.status === 'logged_in');
+                    console.log(`서버에서 ${loggedAccounts.length}개 로그인된 계정 발견`);
+                }
+            }
+        } catch (serverError) {
+            console.log('서버 응답 실패, 기본 계정 목록 사용:', serverError.message);
+        }
+        
+        // 서버에서 계정을 가져오지 못한 경우 처리
+        if (loggedAccounts.length === 0) {
+            console.log('⚠️ 서버에서 로그인된 계정을 가져올 수 없습니다. 화력 자동 배치를 건너뜁니다.');
             return;
         }
         
-        const loggedAccounts = data.accounts.filter(acc => acc.status === 'logged_in');
-        console.log(`서버에서 ${loggedAccounts.length}개 로그인된 계정 발견`);
+        console.log(`✅ 서버에서 ${loggedAccounts.length}개 계정 동적 로드 완료`);
+        loggedAccounts.forEach((acc, i) => {
+            console.log(`  ${i+1}. ${acc.user.first_name} (${acc.phone})`);
+        });
         
         // 기존 화력 섹션 전체 초기화 (1-30번)
         for (let i = 1; i <= 30; i++) {
@@ -3655,7 +3873,7 @@ async function sendProfitVerificationAuto(capacity) {
             }
             
             // 전송 간격
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 600));
         }
         
         // 전송 완료 메시지도 제거하여 완전히 조용히 전송
@@ -4089,15 +4307,25 @@ async function refreshAllAccountGroups() {
     console.log('Refreshing all account groups...');
     
     try {
-        // 서버가 실행 중인지 먼저 확인
+        // 서버가 실행 중인지 먼저 확인 (타임아웃 포함)
+        let serverAvailable = false;
         try {
-            const testResponse = await fetch(`${API_BASE_URL}/proxy-status`);
-            if (!testResponse.ok) {
-                console.log('Server not available, skipping group refresh');
-                return;
-            }
+            const testResponse = await Promise.race([
+                fetch(`${API_BASE_URL}/proxy-status`),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+            ]);
+            serverAvailable = testResponse.ok;
         } catch (serverError) {
-            console.log('Server not available, skipping group refresh');
+            console.log('Server not available, will continue with cached data');
+            serverAvailable = false;
+        }
+        
+        if (!serverAvailable) {
+            console.log('서버 연결 불가, 기존 데이터로 UI 업데이트만 진행');
+            // 서버가 없어도 기본 UI 업데이트는 진행
+            renderExpertRooms();
+            renderFirepowerAccountsList();
+            renderFirepowerRooms(appState.activeFirepower);
             return;
         }
         
@@ -4108,7 +4336,7 @@ async function refreshAllAccountGroups() {
                 if (room && room.phone) {
                     console.log(`Refreshing expert groups for ${room.phone}`);
                     await refreshAccountGroups(room.phone, 'expert', i);
-                    await new Promise(resolve => setTimeout(resolve, 500)); // 0.5초 간격
+                    await new Promise(resolve => setTimeout(resolve, 600)); // 0.5초 간격
                 }
             }
         }
@@ -4121,7 +4349,7 @@ async function refreshAllAccountGroups() {
             if (room && room.phone) {
                 console.log(`Refreshing firepower ${firepower} groups for ${room.phone}`);
                 await refreshAccountGroups(room.phone, 'firepower', firepower);
-                await new Promise(resolve => setTimeout(resolve, 500)); // 0.5초 간격
+                await new Promise(resolve => setTimeout(resolve, 600)); // 0.5초 간격
             }
         }
         
@@ -4179,25 +4407,41 @@ async function autoConnectAccount(phone) {
 // 특정 계정의 그룹 목록 새로고침
 async function refreshAccountGroups(phone, type, index) {
     try {
-        const response = await fetch(`${API_BASE_URL}/get-groups`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: phone })
-        });
+        console.log(`🔄 그룹 새로고침 시작: ${phone} (${type} ${index})`);
+        
+        // 3초 타임아웃 적용
+        const response = await Promise.race([
+            fetch(`${API_BASE_URL}/get-groups`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: phone })
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+        ]);
         
         if (!response.ok) {
+            console.warn(`❌ 서버 응답 오류 ${phone}: ${response.status}`);
+            
             if (response.status === 400) {
-                console.log(`Account ${phone} not connected, attempting auto-connection...`);
+                console.log(`🔗 ${phone} 연결되지 않음, 자동 연결 시도...`);
                 // 400 에러면 자동 연결 시도
-                const connectResult = await autoConnectAccount(phone);
-                if (connectResult) {
-                    // 연결 성공시 다시 그룹 목록 요청
-                    console.log(`Auto-connection successful for ${phone}, retrying groups...`);
-                    await new Promise(resolve => setTimeout(resolve, 2000)); // 2초 대기
-                    return refreshAccountGroups(phone, type, index); // 재귀 호출
+                try {
+                    const connectResult = await autoConnectAccount(phone);
+                    if (connectResult) {
+                        // 연결 성공시 다시 그룹 목록 요청
+                        console.log(`✅ ${phone} 자동 연결 성공, 그룹 재요청...`);
+                        await new Promise(resolve => setTimeout(resolve, 2000)); // 2초 대기
+                        return refreshAccountGroups(phone, type, index); // 재귀 호출
+                    } else {
+                        console.log(`❌ ${phone} 자동 연결 실패`);
+                    }
+                } catch (connectError) {
+                    console.log(`❌ ${phone} 연결 중 오류:`, connectError.message);
                 }
             }
-            console.warn(`Server error for ${phone}: ${response.status}`);
+            
+            // 실패한 경우 기존 그룹 유지
+            console.log(`⚠️ ${phone} 그룹 로딩 실패, 기존 데이터 유지`);
             return;
         }
         
@@ -4258,9 +4502,9 @@ async function registerUserAPI() {
         return;
     }
     
-    // 전화번호 형식 검증
-    if (!phone.startsWith('+') || phone.length < 10) {
-        showRegistrationStatus('올바른 전화번호 형식이 아닙니다. (+821012345678)', 'error');
+    // 전화번호 형식 검증 (국제 번호 지원)
+    if (!phone.startsWith('+') || phone.length < 8) {
+        showRegistrationStatus('올바른 전화번호 형식이 아닙니다. (예: +1234567890, +821012345678)', 'error');
         return;
     }
     
@@ -5585,10 +5829,42 @@ function editApiConfig(type, index) {
 }
 
 // API 설정 삭제
-function deleteApiConfig(type, index) {
-    if (confirm(`이 ${type === 'expert' ? '전문가' : '화력'} API를 삭제하시겠습니까?`)) {
-        // 임시: 삭제 기능은 나중에 구현
-        alert('삭제 기능은 곧 구현됩니다.');
+async function deleteApiConfig(type, index) {
+    const apiList = type === 'expert' ? appState.api.expert : appState.api.firepower;
+    const apiConfig = apiList[index];
+    
+    if (!apiConfig) {
+        alert('삭제할 API가 없습니다.');
+        return;
+    }
+    
+    if (confirm(`이 ${type === 'expert' ? '전문가' : '화력'} API를 삭제하시겠습니까?\n계정: ${apiConfig.phone}\n\n⚠️ 서버에서도 완전히 삭제됩니다.`)) {
+        try {
+            // 서버에서 API 삭제
+            const response = await fetch('/api/delete-user-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: apiConfig.phone })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // 로컬에서도 삭제
+                apiList.splice(index, 1);
+                saveToLocalStorage();
+                renderApiList();
+                
+                console.log(`✅ ${type} API 완전 삭제 완료:`, result);
+                alert(`API가 서버에서 완전히 삭제되었습니다.\n삭제된 세션 파일: ${result.removed_files?.length || 0}개`);
+            } else {
+                console.error('❌ API 삭제 실패:', result.error);
+                alert(`API 삭제 실패: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('❌ API 삭제 요청 오류:', error);
+            alert(`API 삭제 요청 중 오류가 발생했습니다: ${error.message}`);
+        }
     }
 }
 
