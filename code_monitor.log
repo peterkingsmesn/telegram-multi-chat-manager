@@ -1,0 +1,5 @@
+2025-07-27 16:43:49,479 - CodeMonitor - ERROR - Python 파일 분석 실패 E:\System\Temp\tmpafydgmyd.py: 'utf-8' codec can't decode byte 0xb9 in position 4: invalid start byte
+2025-07-27 16:45:34,622 - CodeMonitor - ERROR - Python 파일 분석 실패 E:\System\Temp\tmppo5a_jtb.py: 'utf-8' codec can't decode byte 0xb9 in position 4: invalid start byte
+2025-07-27 16:45:44,461 - CodeMonitor - INFO - 코드 모니터링 시작: .
+2025-07-27 16:45:44,461 - CodeMonitor - INFO - 전체 파일 스캔 시작
+2025-07-27 16:45:44,538 - CodeMonitor - INFO - 상세 보고서 저장: monitoring_reports\validation_report_20250727_164544.json

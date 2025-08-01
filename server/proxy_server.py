@@ -540,21 +540,89 @@ def get_groups():
             if not await clients[phone].is_user_authorized():
                 return {'success': False, 'error': '로그인이 필요합니다'}
             
+            print(f"[GET_GROUPS] Starting group fetch for {phone}")
+            
+            print(f"[GET_GROUPS] Starting fresh group fetch for {phone}")
+            
+            # 🔥 완전 새로고침: 캐시 무시하고 서버에서 최신 데이터 가져오기
+            try:
+                # 모든 대화목록을 강제로 다시 가져오기 (캐시 무시)
+                all_dialogs = await clients[phone].get_dialogs(limit=None)
+                print(f"[GET_GROUPS] Fetched {len(all_dialogs)} total dialogs from server")
+            except Exception as dialog_error:
+                print(f"[GET_GROUPS] Error fetching fresh dialogs: {str(dialog_error)}")
+                # 기존 방식으로 폴백
+                all_dialogs = [d async for d in clients[phone].iter_dialogs()]
+            
             groups = []
-            async for dialog in clients[phone].iter_dialogs():
+            valid_groups = 0
+            invalid_groups = 0
+            
+            for dialog in all_dialogs:
                 if dialog.is_group or dialog.is_channel:
-                    # 모든 그룹/채널 표시 (필터링 제거)
-                    groups.append({
-                        'id': dialog.id,
-                        'title': dialog.title,
-                        'is_channel': dialog.is_channel,
-                        'is_group': dialog.is_group
-                    })
+                    try:
+                        # 🔍 실제 가입 상태 확인 (중요!)
+                        # 그룹에 실제로 접근 가능한지 테스트
+                        entity = await clients[phone].get_entity(dialog.id)
+                        
+                        # 실제로 메시지를 1개 가져올 수 있는지 테스트 (가입 상태 확인)
+                        can_access = False
+                        try:
+                            async for message in clients[phone].iter_messages(entity, limit=1):
+                                can_access = True
+                                break
+                            # 메시지가 없어도 접근 가능하면 OK
+                            if not can_access:
+                                can_access = True
+                        except Exception as access_error:
+                            print(f"[GET_GROUPS] Cannot access group {dialog.id}: {str(access_error)}")
+                            invalid_groups += 1
+                            continue
+                        
+                        # 제목 가져오기
+                        real_title = getattr(entity, 'title', None)
+                        
+                        # 🚫 undefined/null 문자열 완전 차단
+                        if real_title in ['undefined', 'null', '', None]:
+                            print(f"[GET_GROUPS] Invalid title for {dialog.id}, attempting recovery...")
+                            # 한 번 더 시도
+                            try:
+                                fresh_entity = await clients[phone].get_entity(dialog.id)
+                                real_title = getattr(fresh_entity, 'title', None)
+                                if real_title in ['undefined', 'null', '', None]:
+                                    real_title = f'그룹_{dialog.id}'
+                                    print(f"[GET_GROUPS] Using fallback title for {dialog.id}")
+                            except:
+                                real_title = f'그룹_{dialog.id}'
+                        
+                        final_title = real_title
+                    
+                        # ✅ 유효한 그룹만 추가
+                        group_data = {
+                            'id': dialog.id,
+                            'title': final_title,
+                            'is_channel': dialog.is_channel,
+                            'is_group': dialog.is_group
+                        }
+                        
+                        groups.append(group_data)
+                        valid_groups += 1
+                        print(f"[GET_GROUPS] ✅ Valid group: {dialog.id} -> '{final_title}'")
+                        
+                    except Exception as entity_error:
+                        print(f"[GET_GROUPS] ❌ Skipping inaccessible group {dialog.id}: {str(entity_error)}")
+                        invalid_groups += 1
+                        # 접근 불가능한 그룹은 아예 제외
+                        continue
+            
+            print(f"[GET_GROUPS] ✅ Successfully fetched {valid_groups} valid groups, skipped {invalid_groups} invalid groups for {phone}")
             
             return {
                 'success': True,
                 'groups': groups,
-                'count': len(groups)
+                'count': len(groups),
+                'valid_count': valid_groups,
+                'invalid_count': invalid_groups
             }
         
         return jsonify(loop.run_until_complete(fetch()))
@@ -853,13 +921,13 @@ def auto_load_sessions():
                 proxy = (socks.SOCKS5, proxy_info['addr'], proxy_info['port'], 
                         True, proxy_info['username'], proxy_info['password'])
                 clients[phone_number] = TelegramClient(session_path, api_id, api_hash, proxy=proxy)
-                print(f"✅ Loaded session for {phone_number} with proxy {proxy_info['addr']}")
+                print(f"[OK] Loaded session for {phone_number} with proxy {proxy_info['addr']}")
             else:
                 clients[phone_number] = TelegramClient(session_path, api_id, api_hash)
-                print(f"✅ Loaded session for {phone_number} with direct connection")
+                print(f"[OK] Loaded session for {phone_number} with direct connection")
             
         except Exception as e:
-            print(f"❌ Failed to load {session_file}: {str(e)}")
+            print(f"[ERROR] Failed to load {session_file}: {str(e)}")
     
     print(f"Auto-loaded {len(clients)} sessions")
     print("=======================================\n")

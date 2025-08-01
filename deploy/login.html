@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 - 텔레그램 멀티 챗 매니저</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .login-container {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 40px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo h1 {
+            color: #4fbdba;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .logo p {
+            color: #aaa;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+            font-size: 14px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            background: #0f3460;
+            border: 1px solid #2a2a4e;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #4fbdba;
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: #4fbdba;
+            border: none;
+            border-radius: 8px;
+            color: #0f3460;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-login:hover {
+            background: #7ec8e3;
+            transform: translateY(-2px);
+        }
+        
+        .btn-login:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status-message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+        }
+        
+        .status-message.error {
+            background: #dc3545;
+            display: block;
+        }
+        
+        .status-message.success {
+            background: #28a745;
+            display: block;
+        }
+        
+        .hardware-id {
+            margin-top: 20px;
+            padding: 10px;
+            background: #0a1e3b;
+            border-radius: 8px;
+            font-size: 12px;
+            word-break: break-all;
+            color: #666;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .info-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: #0a1e3b;
+            border-radius: 8px;
+            border-left: 4px solid #4fbdba;
+        }
+        
+        .info-box h3 {
+            color: #4fbdba;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .info-box p {
+            color: #aaa;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1>텔레그램 멀티 챗</h1>
+            <p>라이센스 인증</p>
+        </div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="licenseKey">라이센스 키</label>
+                <input type="text" id="licenseKey" placeholder="XXXX-XXXX-XXXX-XXXX" required>
+            </div>
+            
+            <button type="submit" class="btn-login" id="loginBtn">
+                로그인
+            </button>
+        </form>
+        
+        <div class="status-message" id="statusMessage"></div>
+        
+        <div class="hardware-id">
+            <strong>하드웨어 ID:</strong> <span id="hardwareId">생성 중...</span>
+        </div>
+        
+        <div class="info-box">
+            <h3>처음 사용하시나요?</h3>
+            <p>라이센스 키는 구매 시 이메일로 전송됩니다. 하드웨어 ID는 자동으로 생성되며, 라이센스 활성화에 필요합니다.</p>
+        </div>
+    </div>
+    
+    <script>
+        // 하드웨어 ID 생성
+        function generateHardwareId() {
+            const nav = window.navigator;
+            const screen = window.screen;
+            
+            // 브라우저 정보 수집
+            const data = {
+                userAgent: nav.userAgent,
+                language: nav.language,
+                platform: nav.platform,
+                screenResolution: `${screen.width}x${screen.height}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                timestamp: Date.now()
+            };
+            
+            // 문자열로 변환하고 해시 생성
+            const dataString = JSON.stringify(data);
+            return btoa(dataString).replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);
+        }
+        
+        // 하드웨어 ID 표시
+        const hardwareId = generateHardwareId();
+        document.getElementById('hardwareId').textContent = hardwareId;
+        
+        // 저장된 라이센스 키 확인
+        const savedLicenseKey = localStorage.getItem('licenseKey');
+        if (savedLicenseKey) {
+            document.getElementById('licenseKey').value = savedLicenseKey;
+        }
+        
+        // 로그인 폼 제출
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const licenseKey = document.getElementById('licenseKey').value.trim();
+            const loginBtn = document.getElementById('loginBtn');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            if (!licenseKey) {
+                showStatus('error', '라이센스 키를 입력해주세요.');
+                return;
+            }
+            
+            // 버튼 비활성화
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="loading"></span> 인증 중...';
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        license_key: licenseKey,
+                        hardware_id: hardwareId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // 라이센스 키 저장
+                    localStorage.setItem('licenseKey', licenseKey);
+                    
+                    showStatus('success', '로그인 성공! 메인 페이지로 이동합니다...');
+                    
+                    // 2초 후 메인 페이지로 이동
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 2000);
+                } else {
+                    showStatus('error', result.error || '로그인에 실패했습니다.');
+                }
+            } catch (error) {
+                showStatus('error', '서버 연결에 실패했습니다.');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = '로그인';
+            }
+        });
+        
+        // 상태 메시지 표시
+        function showStatus(type, message) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.className = 'status-message ' + type;
+            statusEl.textContent = message;
+            
+            // 5초 후 자동 숨김
+            setTimeout(() => {
+                statusEl.className = 'status-message';
+                statusEl.textContent = '';
+            }, 5000);
+        }
+        
+        // 인증 상태 확인
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('http://localhost:5000/api/auth/status', {
+                    credentials: 'include'
+                });
+                
+                const result = await response.json();
+                
+                if (result.authenticated) {
+                    // 이미 로그인된 경우 메인 페이지로 이동
+                    window.location.href = 'index.html';
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+            }
+        }
+        
+        // 페이지 로드 시 인증 상태 확인
+        checkAuthStatus();
+    </script>
+</body>
+</html>

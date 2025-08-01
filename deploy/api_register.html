@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 등록 - 텔레그램 멀티 챗 매니저</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #4fbdba;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: #0f3460;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn.active {
+            background: #4fbdba;
+        }
+        
+        .tab-btn:hover {
+            background: #4fbdba;
+            transform: translateY(-2px);
+        }
+        
+        .form-section {
+            display: none;
+        }
+        
+        .form-section.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+            font-size: 14px;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            background: #0f3460;
+            border: 1px solid #2a2a4e;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4fbdba;
+        }
+        
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: #4fbdba;
+            border: none;
+            border-radius: 8px;
+            color: #0f3460;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background: #7ec8e3;
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status-message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+        }
+        
+        .status-message.success {
+            background: #28a745;
+            display: block;
+        }
+        
+        .status-message.error {
+            background: #dc3545;
+            display: block;
+        }
+        
+        .status-message.info {
+            background: #17a2b8;
+            display: block;
+        }
+        
+        .accounts-list {
+            margin-top: 30px;
+        }
+        
+        .account-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #0f3460;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .account-info {
+            flex: 1;
+        }
+        
+        .account-type {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #4fbdba;
+            color: #0f3460;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .account-type.expert {
+            background: #ffc107;
+        }
+        
+        .btn-remove {
+            padding: 6px 12px;
+            background: #dc3545;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-remove:hover {
+            background: #c82333;
+        }
+        
+        .verification-section {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #0f3460;
+            border-radius: 8px;
+        }
+        
+        .verification-section.active {
+            display: block;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #4fbdba;
+            text-decoration: none;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .proxy-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .proxy-fields {
+            display: none;
+            padding: 15px;
+            background: #0a1e3b;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .proxy-fields.active {
+            display: block;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 메인으로 돌아가기</a>
+        
+        <h1>API 계정 등록</h1>
+        
+        <div class="tab-buttons">
+            <button class="tab-btn active" data-tab="register">새 계정 등록</button>
+            <button class="tab-btn" data-tab="list">등록된 계정</button>
+        </div>
+        
+        <!-- 등록 폼 -->
+        <div class="form-section active" id="register-section">
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="accountType">계정 유형</label>
+                    <select id="accountType" required>
+                        <option value="firepower">화력 계정</option>
+                        <option value="expert">전문가 계정</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">전화번호</label>
+                    <input type="tel" id="phone" placeholder="+1234567890" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="apiId">API ID</label>
+                    <input type="text" id="apiId" placeholder="12345678" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="apiHash">API Hash</label>
+                    <input type="text" id="apiHash" placeholder="0123456789abcdef0123456789abcdef" required>
+                </div>
+                
+                <div class="proxy-toggle">
+                    <input type="checkbox" id="useProxy">
+                    <label for="useProxy">프록시 사용</label>
+                </div>
+                
+                <div class="proxy-fields" id="proxyFields">
+                    <div class="form-group">
+                        <label for="proxyAddr">프록시 주소</label>
+                        <input type="text" id="proxyAddr" placeholder="proxy.example.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="proxyPort">포트</label>
+                        <input type="number" id="proxyPort" placeholder="1080" value="1080">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="proxyUsername">사용자명 (선택)</label>
+                        <input type="text" id="proxyUsername" placeholder="username">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="proxyPassword">비밀번호 (선택)</label>
+                        <input type="password" id="proxyPassword" placeholder="password">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary" id="startRegisterBtn">
+                    등록 시작
+                </button>
+            </form>
+            
+            <!-- 인증 섹션 -->
+            <div class="verification-section" id="verificationSection">
+                <h3>텔레그램 인증</h3>
+                <p style="margin-bottom: 15px; color: #aaa;">
+                    텔레그램으로 전송된 인증 코드를 입력하세요.
+                </p>
+                
+                <div class="form-group">
+                    <label for="verifyCode">인증 코드</label>
+                    <input type="text" id="verifyCode" placeholder="12345" maxlength="5">
+                </div>
+                
+                <div class="form-group" id="passwordGroup" style="display: none;">
+                    <label for="password">2단계 인증 비밀번호</label>
+                    <input type="password" id="password" placeholder="비밀번호">
+                </div>
+                
+                <button type="button" class="btn-primary" id="verifyBtn">
+                    인증 확인
+                </button>
+                
+                <div style="text-align: center; margin-top: 15px;">
+                    <button type="button" class="btn-link" id="resendCodeBtn" style="background: none; border: none; color: #4fbdba; cursor: pointer; text-decoration: underline;">
+                        인증 코드를 다시 받기
+                    </button>
+                </div>
+            </div>
+            
+            <div class="status-message" id="statusMessage"></div>
+        </div>
+        
+        <!-- 계정 목록 -->
+        <div class="form-section" id="list-section">
+            <div class="accounts-list" id="accountsList">
+                <!-- 계정 목록이 여기에 표시됩니다 -->
+            </div>
+        </div>
+    </div>
+    
+    <script src="config_client.js"></script>
+    <script>
+        const API_BASE = config.server.baseUrl || 'http://localhost:5000';
+        let currentPhone = null;
+        
+        // 로그인 상태 확인
+        async function checkAuth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/status`, {
+                    credentials: 'include'
+                });
+                
+                const result = await response.json();
+                
+                if (!result.authenticated) {
+                    // 로그인 페이지로 리다이렉트
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                window.location.href = 'login.html';
+                return false;
+            }
+        }
+        
+        // 페이지 로드 시 인증 확인
+        checkAuth();
+        
+        // 탭 전환
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tab = e.target.dataset.tab;
+                
+                // 탭 버튼 활성화
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // 섹션 전환
+                document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+                document.getElementById(`${tab}-section`).classList.add('active');
+                
+                // 계정 목록 탭인 경우 로드
+                if (tab === 'list') {
+                    loadAccounts();
+                }
+            });
+        });
+        
+        // 프록시 토글
+        document.getElementById('useProxy').addEventListener('change', (e) => {
+            const proxyFields = document.getElementById('proxyFields');
+            if (e.target.checked) {
+                proxyFields.classList.add('active');
+            } else {
+                proxyFields.classList.remove('active');
+            }
+        });
+        
+        // 등록 폼 제출
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const accountType = document.getElementById('accountType').value;
+            const phone = document.getElementById('phone').value;
+            const apiId = document.getElementById('apiId').value;
+            const apiHash = document.getElementById('apiHash').value;
+            
+            // 프록시 정보
+            let proxy = null;
+            if (document.getElementById('useProxy').checked) {
+                proxy = {
+                    addr: document.getElementById('proxyAddr').value,
+                    port: parseInt(document.getElementById('proxyPort').value),
+                    username: document.getElementById('proxyUsername').value,
+                    password: document.getElementById('proxyPassword').value
+                };
+            }
+            
+            // 버튼 비활성화
+            const btn = document.getElementById('startRegisterBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> 연결 중...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/register/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        phone,
+                        api_id: apiId,
+                        api_hash: apiHash,
+                        type: accountType,
+                        proxy
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentPhone = phone;
+                    
+                    if (result.already_authorized) {
+                        showStatus('success', '이미 인증된 계정입니다. 등록이 완료되었습니다.');
+                        setTimeout(() => {
+                            document.getElementById('registerForm').reset();
+                            document.getElementById('useProxy').checked = false;
+                            document.getElementById('proxyFields').classList.remove('active');
+                            showStatus('', '');
+                        }, 3000);
+                    } else if (result.require_code) {
+                        showStatus('info', '인증 코드가 전송되었습니다.');
+                        document.getElementById('registerForm').style.display = 'none';
+                        document.getElementById('verificationSection').classList.add('active');
+                        document.getElementById('verifyCode').focus();
+                    }
+                } else {
+                    showStatus('error', result.error || '등록 시작에 실패했습니다.');
+                }
+            } catch (error) {
+                showStatus('error', '서버 연결에 실패했습니다.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '등록 시작';
+            }
+        });
+        
+        // 인증 확인
+        document.getElementById('verifyBtn').addEventListener('click', async () => {
+            const code = document.getElementById('verifyCode').value;
+            const password = document.getElementById('password').value;
+            
+            if (!code) {
+                showStatus('error', '인증 코드를 입력하세요.');
+                return;
+            }
+            
+            const btn = document.getElementById('verifyBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> 인증 중...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/register/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        phone: currentPhone,
+                        code,
+                        password
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus('success', '계정 등록이 완료되었습니다!');
+                    
+                    // 3초 후 초기화
+                    setTimeout(() => {
+                        document.getElementById('registerForm').reset();
+                        document.getElementById('registerForm').style.display = 'block';
+                        document.getElementById('verificationSection').classList.remove('active');
+                        document.getElementById('verifyCode').value = '';
+                        document.getElementById('password').value = '';
+                        document.getElementById('passwordGroup').style.display = 'none';
+                        document.getElementById('useProxy').checked = false;
+                        document.getElementById('proxyFields').classList.remove('active');
+                        showStatus('', '');
+                        currentPhone = null;
+                    }, 3000);
+                } else {
+                    if (result.needs_password) {
+                        document.getElementById('passwordGroup').style.display = 'block';
+                        document.getElementById('password').focus();
+                        showStatus('info', '2단계 인증 비밀번호를 입력하세요.');
+                    } else {
+                        showStatus('error', result.error || '인증에 실패했습니다.');
+                    }
+                }
+            } catch (error) {
+                showStatus('error', '서버 연결에 실패했습니다.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '인증 확인';
+            }
+        });
+        
+        // 계정 목록 로드
+        async function loadAccounts() {
+            try {
+                const response = await fetch(`${API_BASE}/api/accounts/list`, {
+                    credentials: 'include'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    const accountsList = document.getElementById('accountsList');
+                    
+                    if (result.accounts.length === 0) {
+                        accountsList.innerHTML = '<p style="text-align: center; color: #aaa;">등록된 계정이 없습니다.</p>';
+                        return;
+                    }
+                    
+                    accountsList.innerHTML = `
+                        <h3>총 ${result.count.total}개 계정 (화력: ${result.count.firepower}, 전문가: ${result.count.expert})</h3>
+                        ${result.accounts.map(account => `
+                            <div class="account-item">
+                                <div class="account-info">
+                                    <strong>${account.phone}</strong>
+                                    <span class="account-type ${account.type}">${account.type === 'firepower' ? '화력' : '전문가'}</span>
+                                    ${account.has_session ? '✅' : '❌'} 세션
+                                </div>
+                                <button class="btn-remove" onclick="removeAccount('${account.phone}')">제거</button>
+                            </div>
+                        `).join('')}
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load accounts:', error);
+            }
+        }
+        
+        // 계정 제거
+        async function removeAccount(phone) {
+            if (!confirm(`정말로 ${phone} 계정을 제거하시겠습니까?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/accounts/remove`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ phone })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    loadAccounts();
+                } else {
+                    alert('계정 제거에 실패했습니다.');
+                }
+            } catch (error) {
+                alert('서버 연결에 실패했습니다.');
+            }
+        }
+        
+        // 인증 코드 재전송
+        document.getElementById('resendCodeBtn').addEventListener('click', async () => {
+            if (!currentPhone) {
+                showStatus('error', '등록 프로세스를 다시 시작해주세요.');
+                return;
+            }
+            
+            const btn = document.getElementById('resendCodeBtn');
+            btn.disabled = true;
+            btn.textContent = '코드 재전송 중...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/register/resend-code`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ phone: currentPhone })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus('success', '인증 코드가 재전송되었습니다.');
+                    document.getElementById('verifyCode').value = '';
+                    document.getElementById('verifyCode').focus();
+                } else {
+                    showStatus('error', result.error || '코드 재전송에 실패했습니다.');
+                    
+                    // FloodWaitError인 경우 대기 시간 표시
+                    if (result.wait_seconds) {
+                        let remainingSeconds = result.wait_seconds;
+                        const interval = setInterval(() => {
+                            if (remainingSeconds > 0) {
+                                btn.textContent = `${remainingSeconds}초 후 재시도 가능`;
+                                remainingSeconds--;
+                            } else {
+                                clearInterval(interval);
+                                btn.textContent = '인증 코드를 다시 받기';
+                                btn.disabled = false;
+                            }
+                        }, 1000);
+                    }
+                }
+            } catch (error) {
+                showStatus('error', '서버 연결에 실패했습니다.');
+            } finally {
+                if (!result.wait_seconds) {
+                    btn.disabled = false;
+                    btn.textContent = '인증 코드를 다시 받기';
+                }
+            }
+        });
+        
+        // 상태 메시지 표시
+        function showStatus(type, message) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.className = 'status-message';
+            if (type) {
+                statusEl.classList.add(type);
+                statusEl.textContent = message;
+            } else {
+                statusEl.textContent = '';
+            }
+        }
+        
+        // 초기 로드
+        document.addEventListener('DOMContentLoaded', () => {
+            // 전화번호 형식 자동 수정
+            document.getElementById('phone').addEventListener('input', (e) => {
+                let value = e.target.value.replace(/[^\d+]/g, '');
+                if (value && !value.startsWith('+')) {
+                    value = '+' + value;
+                }
+                e.target.value = value;
+            });
+        });
+    </script>
+</body>
+</html>

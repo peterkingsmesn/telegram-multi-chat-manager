@@ -1,0 +1,46 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 5000,
+    "cors_enabled": true
+  },
+  "telegram": {
+    "api_configs": {
+      "+1234567890": {
+        "api_id": 12345678,
+        "api_hash": "your_api_hash_here"
+      }
+    },
+    "default_api": {
+      "api_id": 12345678,
+      "api_hash": "default_api_hash_here"
+    },
+    "sessions_dir": "sessions"
+  },
+  "proxies": {
+    "proxy_account_mapping": {
+      "+1234567890": {
+        "proxy_id": "proxy1",
+        "addr": "proxy.example.com",
+        "port": 12324,
+        "username": "proxy_username",
+        "password": "proxy_password"
+      }
+    },
+    "proxy_pool": {
+      "proxy1": {
+        "addr": "proxy1.example.com",
+        "port": 12324,
+        "username": "username",
+        "password": "password",
+        "accounts": []
+      }
+    }
+  },
+  "app": {
+    "max_firepower_accounts": 30,
+    "message_send_delay": 800,
+    "auto_sync_interval": 300000,
+    "auto_sync_enabled": false
+  }
+}

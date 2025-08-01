@@ -11,7 +11,26 @@ const appState = {
     currentRoom: null,
     templates: [], // 메시지 템플릿
     currentPhone: null, // 현재 연결된 전화번호
-    currentUser: null // 현재 로그인한 사용자 정보
+    currentUser: null, // 현재 로그인한 사용자 정보
+    
+    // 세션 레벨 중복 방지 시스템
+    profitImageSession: {
+        shuffledImagesByCapacity: {}, // 용량별로 셔플된 이미지 순서 저장
+        usedImageIndices: {}, // 용량별로 사용된 이미지 인덱스 추적
+        sessionStartTime: null // 세션 시작 시간
+    },
+    
+    // 메시지 전송 속도 설정
+    messageSpeed: {
+        current: 800, // 현재 설정된 속도 (밀리초)
+        default: 800  // 기본 속도
+    },
+    
+    // 자동 동기화 설정
+    autoSync: {
+        enabled: false, // 자동 동기화 활성화/비활성화
+        interval: 5 * 60 * 1000 // 5분 간격
+    }
 };
 
 // DOM 요소들을 저장할 객체
@@ -20,6 +39,8 @@ let elements = {};
 // 초기화
 function init() {
     console.log('=== Initializing app ===');
+    console.log('🔍 앱 초기화 시작 - appState.rooms:', appState.rooms);
+    console.log('🔍 앱 초기화 시작 - appState.rooms.expert:', appState.rooms.expert);
     initializeElements();
     setupEventListeners();
     
@@ -62,20 +83,18 @@ function init() {
         console.error('Error in renderFirepowerAccountsList:', e);
     }
     
-    try {
-        // 화력 계정 중복 방지를 위한 강제 정리 (페이지 로드 시)
-        console.log('🧹 페이지 로드 시 화력 계정 정리 시작...');
-        cleanupDuplicateAccounts();
-        console.log('✅ cleanupDuplicateAccounts completed');
-    } catch (e) {
-        console.error('❌ Error in cleanupDuplicateAccounts:', e);
-    }
+    // AGGRESSIVE 화력 계정 정리 시스템 비활성화 (전문가 계정 보호)
+    console.log('🛡️ 전문가 계정 보호를 위해 AGGRESSIVE 정리 비활성화');
+    
+    // 🚫 자동 서버 동기화 비활성화 (그룹 상태 보존을 위해)
+    console.log('🚫 자동 서버 동기화 비활성화 - 수동 새로고침만 사용');
     
     try {
-        debugLoggedAccounts();
-        console.log('debugLoggedAccounts completed');
+        loadMessageSpeed();
+        updateSpeedDisplay(); // 초기 로드 후 화면 업데이트
+        console.log('loadMessageSpeed completed');
     } catch (e) {
-        console.error('Error in debugLoggedAccounts:', e);
+        console.error('Error in loadMessageSpeed:', e);
     }
 }
 
@@ -384,6 +403,39 @@ function setupEventListeners() {
         });
     }
     
+    // 이미지 세션 초기화 버튼
+    const resetImageSessionBtn = document.getElementById('resetImageSessionBtn');
+    if (resetImageSessionBtn) {
+        resetImageSessionBtn.addEventListener('click', () => {
+            const success = resetAllImageSessions();
+            if (success) {
+                // 성공 메시지 표시
+                resetImageSessionBtn.textContent = '🎲 모든 이미지 세션이 초기화되었습니다';
+                resetImageSessionBtn.style.background = '#28a745';
+                resetImageSessionBtn.style.color = 'white';
+                
+                // 3초 후 원래 상태로 복구
+                setTimeout(() => {
+                    resetImageSessionBtn.textContent = '🎲 이미지 세션 초기화';
+                    resetImageSessionBtn.style.background = '';
+                    resetImageSessionBtn.style.color = '';
+                }, 3000);
+            } else {
+                // 실패 메시지 표시
+                resetImageSessionBtn.textContent = '❌ 초기화 실패';
+                resetImageSessionBtn.style.background = '#dc3545';
+                resetImageSessionBtn.style.color = 'white';
+                
+                // 3초 후 원래 상태로 복구
+                setTimeout(() => {
+                    resetImageSessionBtn.textContent = '🎲 이미지 세션 초기화';
+                    resetImageSessionBtn.style.background = '';
+                    resetImageSessionBtn.style.color = '';
+                }, 3000);
+            }
+        });
+    }
+    
     // 중요 계정 재연결 버튼
     const reconnectAccountsBtn = document.getElementById('reconnectAccountsBtn');
     if (reconnectAccountsBtn) {
@@ -394,9 +446,11 @@ function setupEventListeners() {
             try {
                 const success = await reconnectMissingAccounts();
                 if (success) {
-                    showSuccessMessage('중요 계정 재연결이 완료되었습니다.');
+                    console.log('✅ 중요 계정 재연결이 완료되었습니다.');
+                    // showSuccessMessage('중요 계정 재연결이 완료되었습니다.');
                 } else {
-                    showErrorMessage('재연결 중 일부 오류가 발생했습니다.');
+                    console.error('❌ 재연결 중 일부 오류가 발생했습니다.');
+                    // showErrorMessage('재연결 중 일부 오류가 발생했습니다.');
                 }
             } catch (error) {
                 console.error('Reconnect error:', error);
@@ -448,6 +502,158 @@ function setupEventListeners() {
             switchApiTab(tabName);
         });
     });
+    
+    // 메시지 속도 설정 이벤트
+    const speedSettingsBtn = document.getElementById('speedSettingsBtn');
+    if (speedSettingsBtn) {
+        speedSettingsBtn.addEventListener('click', showSpeedSettingsModal);
+    }
+    
+    // 속도 프리셋 버튼들
+    document.querySelectorAll('.speed-preset-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const speed = parseInt(e.target.dataset.speed);
+            if (speed) {
+                // 모든 프리셋 버튼에서 active 클래스 제거
+                document.querySelectorAll('.speed-preset-btn').forEach(b => b.classList.remove('active'));
+                // 현재 버튼에 active 클래스 추가
+                e.target.classList.add('active');
+                // 커스텀 입력 필드에 값 설정
+                const customSpeedInput = document.getElementById('customSpeedInput');
+                if (customSpeedInput) {
+                    customSpeedInput.value = speed;
+                    updateSpeedPreview();
+                }
+            }
+        });
+    });
+    
+    // 커스텀 속도 입력
+    const customSpeedInput = document.getElementById('customSpeedInput');
+    if (customSpeedInput) {
+        customSpeedInput.addEventListener('input', updateSpeedPreview);
+    }
+    
+    // 속도 설정 적용 버튼
+    const applySpeedBtn = document.getElementById('applySpeedBtn');
+    if (applySpeedBtn) {
+        applySpeedBtn.addEventListener('click', () => {
+            const customSpeedInput = document.getElementById('customSpeedInput');
+            if (customSpeedInput) {
+                const newSpeed = parseInt(customSpeedInput.value);
+                if (newSpeed && newSpeed >= 100 && newSpeed <= 5000) {
+                    appState.messageSpeed.current = newSpeed;
+                    saveToLocalStorage();
+                    
+                    // 모달 닫기 - 올바른 함수 사용
+                    hideSpeedSettingsModal();
+                    
+                    // 성공 메시지 표시 (선택사항)
+                    console.log(`메시지 속도가 ${newSpeed}ms로 설정되었습니다.`);
+                }
+            }
+        });
+    }
+    
+    // 속도 설정 취소 버튼
+    const cancelSpeedBtn = document.getElementById('cancelSpeedBtn');
+    if (cancelSpeedBtn) {
+        cancelSpeedBtn.addEventListener('click', () => {
+            hideSpeedSettingsModal();
+        });
+    }
+}
+
+// 클립보드 붙여넣기 처리 함수
+function handlePaste(event) {
+    const items = event.clipboardData.items;
+    
+    // 클립보드에 이미지가 있는지 확인
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        
+        // 이미지 파일인 경우
+        if (item.type.indexOf('image') !== -1) {
+            event.preventDefault(); // 기본 붙여넣기 방지
+            
+            const file = item.getAsFile();
+            if (file) {
+                // 첨부된 파일 표시 영역에 이미지 추가
+                displayAttachedImage(file);
+                console.log('📎 이미지가 첨부되었습니다:', file.name, file.size, 'bytes');
+            }
+            return; // 이미지 처리 후 함수 종료
+        }
+    }
+    
+    // 텍스트만 있는 경우 기본 붙여넣기 허용
+    console.log('📝 텍스트 내용이 붙여넣기되었습니다.');
+}
+
+// 첨부된 이미지를 표시하는 함수
+function displayAttachedImage(file) {
+    if (!elements.attachedFiles) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const imagePreview = document.createElement('div');
+        imagePreview.className = 'attached-image-preview';
+        imagePreview.style.cssText = `
+            display: inline-block;
+            margin: 5px;
+            position: relative;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        `;
+        
+        imagePreview.innerHTML = `
+            <img src="${e.target.result}" style="width: 100px; height: 100px; object-fit: cover;">
+            <button onclick="removeAttachedImage(this)" style="
+                position: absolute;
+                top: 2px;
+                right: 2px;
+                background: rgba(255, 0, 0, 0.8);
+                color: white;
+                border: none;
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                cursor: pointer;
+                font-size: 12px;
+            ">×</button>
+            <div style="font-size: 10px; padding: 2px; background: rgba(0,0,0,0.7); color: white; text-align: center;">
+                ${file.name.length > 12 ? file.name.substring(0, 12) + '...' : file.name}
+            </div>
+        `;
+        
+        elements.attachedFiles.appendChild(imagePreview);
+    };
+    reader.readAsDataURL(file);
+}
+
+// 첨부된 이미지 제거 함수
+function removeAttachedImage(button) {
+    const imagePreview = button.parentElement;
+    imagePreview.remove();
+}
+
+// 모든 이미지 세션 초기화 함수
+function resetAllImageSessions() {
+    try {
+        // 세션 레벨 중복 방지 시스템 초기화
+        appState.profitImageSession = {
+            shuffledImagesByCapacity: {}, // 용량별로 셔플된 이미지 순서 저장
+            usedImageIndices: {}, // 용량별로 사용된 이미지 인덱스 추적
+            sessionStartTime: Date.now() // 세션 시작 시간을 현재 시간으로 설정
+        };
+        
+        console.log('✅ 모든 이미지 세션이 초기화되었습니다.');
+        return true;
+    } catch (error) {
+        console.error('❌ 이미지 세션 초기화 중 오류 발생:', error);
+        return false;
+    }
 }
 
 // API 그리드 렌더링
@@ -627,13 +833,25 @@ function renderFirepowerRooms(firepower) {
     if (firepowerGroups) {
         firepowerGroups.innerHTML = '';
         if (room.selectedGroups && room.selectedGroups.length > 0) {
+            // 그룹 데이터 구조 확인을 위한 로그
+            console.log(`🔍 화력 ${firepower} 그룹 데이터 구조:`, room.selectedGroups);
+            
             room.selectedGroups.forEach((group, index) => {
                 const groupDiv = document.createElement('div');
                 groupDiv.className = 'selected-group-item';
                 const isActive = group.active !== false; // 기본값은 true
+                
+                // 그룹명 결정 로직 (안전한 fallback 포함)
+                let groupName = group.name || group.title || '그룹명 없음';
+                
+                // 개별 그룹의 데이터 구조 확인
+                if (!group.name && !group.title) {
+                    console.warn(`⚠️ 그룹 ${index}의 name/title이 없습니다:`, group);
+                }
+                
                 groupDiv.innerHTML = `
                     <input type="checkbox" id="group-${firepower}-${index}" ${isActive ? 'checked' : ''} onchange="toggleGroupInFirepower(${firepower}, ${index})">
-                    <label for="group-${firepower}-${index}">${group.name}</label>
+                    <label for="group-${firepower}-${index}">${groupName}</label>
                 `;
                 firepowerGroups.appendChild(groupDiv);
             });
@@ -755,40 +973,43 @@ function assignApiToRoom(roomId, apiIndex) {
 
 // 메시지 전송
 async function sendMessage() {
-    const message = elements.messageTextarea.value.trim();
-    if (!message) {
-        showErrorMessage('메시지를 입력해주세요.');
+    console.log('🔍 elements.messageTextarea:', elements.messageTextarea);
+    console.log('🔍 messageTextarea 존재:', !!elements.messageTextarea);
+    
+    // 메시지 입력란 값 직접 확인
+    console.log('🔍 실제 textarea 값:', document.getElementById('messageTextarea')?.value);
+    console.log('🔍 elements를 통한 값:', elements.messageTextarea?.value);
+    
+    const message = (document.getElementById('messageTextarea')?.value || elements.messageTextarea?.value || '').trim();
+    
+    // 기존 붙여넣기 이미지 확인 (권한 요청 없이)
+    const attachedFile = elements.attachedFiles.querySelector('.file-item');
+    const hasAttachedImage = !!attachedFile;
+    
+    console.log('🔍 메시지 체크:', message);
+    console.log('🔍 붙여넣기 이미지 있음:', hasAttachedImage);
+    console.log('🔍 메시지 길이:', message ? message.length : 0);
+    
+    if (!message && !hasAttachedImage) {
+        console.log('❌ 메시지나 이미지를 입력해주세요.');
         return;
     }
     
-    // 선택된 그룹들 가져오기
-    const selectedGroups = getSelectedGroups();
+    // 최종 전송할 메시지 = 입력한 텍스트 (이미지는 별도 처리됨)
+    let finalMessage = message || '';
     
-    // 만약 선택된 그룹이 없으면 활성화된 전문가 계정의 모든 그룹을 강제로 선택
+    console.log('🔍 전송할 최종 메시지:', finalMessage);
+    
+    // 선택된 그룹들 가져오기
+    console.log('🚀 sendMessage: getSelectedGroups 호출 시작');
+    const selectedGroups = getSelectedGroups();
+    console.log('🚀 sendMessage: 선택된 그룹들:', selectedGroups);
+    console.log('🚀 sendMessage: 선택된 그룹 개수:', selectedGroups.length);
+    
+    // 선택된 그룹이 없으면 에러 메시지
     if (selectedGroups.length === 0) {
-        // 활성화된 전문가 계정이 있으면 모든 그룹 추가
-        if (appState.rooms.expert && appState.rooms.expert.length > 0) {
-            appState.rooms.expert.forEach((room, index) => {
-                // enabled된 전문가만 포함
-                if (room && room.phone && room.enabled !== false && room.selectedGroups && room.selectedGroups.length > 0) {
-                    room.selectedGroups.forEach((group) => {
-                        selectedGroups.push({
-                            phone: room.phone,
-                            groupId: group.id,
-                            groupTitle: group.name || group.title,
-                            accountType: 'expert',
-                            accountIndex: index
-                        });
-                    });
-                }
-            });
-        }
-        
-        // 여전히 0개면 에러
-        if (selectedGroups.length === 0) {
-            showErrorMessage('전송할 그룹을 선택해주세요.');
-            return;
-        }
+        showErrorMessage('전송할 그룹을 선택해주세요.');
+        return;
     }
     
     // 전송 버튼 비활성화
@@ -817,7 +1038,7 @@ async function sendMessage() {
                         body: JSON.stringify({
                             phone: group.phone,
                             group_ids: [group.groupId],
-                            message: message,
+                            message: finalMessage,
                             images: [{
                                 data: fileData.split(',')[1],
                                 type: fileType
@@ -838,8 +1059,10 @@ async function sendMessage() {
                     console.error(`Error sending to ${group.phone}:`, error);
                 }
                 
-                // 전송 간격
-                await new Promise(resolve => setTimeout(resolve, 600));
+                // 전송 간격 (동적 속도 적용)
+                const currentSpeed = getCurrentMessageSpeed();
+                console.log(`⚡ 현재 설정된 메시지 전송 속도: ${currentSpeed}ms`);
+                await new Promise(resolve => setTimeout(resolve, currentSpeed));
             }
         } else {
             // 텍스트만 전송
@@ -855,7 +1078,7 @@ async function sendMessage() {
                         body: JSON.stringify({
                             phone: group.phone,
                             group_ids: [group.groupId],
-                            message: message
+                            message: finalMessage
                         })
                     });
                     
@@ -888,19 +1111,22 @@ async function sendMessage() {
                     }
                 }
                 
-                // 전송 간격
-                await new Promise(resolve => setTimeout(resolve, 600));
+                // 전송 간격 (동적 속도 적용)
+                const currentSpeed = getCurrentMessageSpeed();
+                console.log(`⚡ 현재 설정된 메시지 전송 속도: ${currentSpeed}ms`);
+                await new Promise(resolve => setTimeout(resolve, currentSpeed));
             }
         }
         
-        // 결과 표시
+        // 결과 로그만 표시 (팝업 제거)
         if (totalSent > 0) {
-            showSuccessMessage(`메시지 전송 완료: 성공 ${totalSent}개, 실패 ${totalFailed}개`);
+            console.log(`✅ 메시지 전송 완료: 성공 ${totalSent}개, 실패 ${totalFailed}개`);
             
             // 전송 성공 시 입력창과 첨부파일 초기화
             elements.messageTextarea.value = '';
             elements.attachedFiles.innerHTML = '';
         } else {
+            console.error(`❌ 전송 실패: ${totalFailed}개 그룹 전송 실패`);
             showErrorMessage(`전송 실패: ${totalFailed}개 그룹 전송 실패`);
         }
         
@@ -992,16 +1218,59 @@ function safeAddToExpertRooms(expertRoom) {
 
 // 선택된 그룹들 가져오기
 function getSelectedGroups() {
+    console.log('🔍🔍🔍 getSelectedGroups 함수 시작!!! 🔍🔍🔍');
+    
     const selectedGroups = [];
+    console.log('🔍 appState exists:', typeof appState !== 'undefined');
+    if (typeof appState !== 'undefined') {
+        console.log('🔍 appState:', appState);
+        console.log('🔍 appState.rooms exists:', appState.rooms !== undefined);
+        if (appState.rooms) {
+            console.log('🔍 appState.rooms:', appState.rooms);
+            console.log('🔍 appState.rooms.expert exists:', appState.rooms.expert !== undefined);
+            console.log('🔍 appState.rooms.expert:', appState.rooms.expert);
+            console.log('🔍 appState.rooms.expert.length:', appState.rooms.expert ? appState.rooms.expert.length : 'N/A');
+        }
+    } else {
+        console.log('❌ appState가 정의되지 않았습니다!');
+    }
+    
+    console.log('🔍 전체 조건 체크:', 
+        typeof appState !== 'undefined', 
+        appState?.rooms !== undefined,
+        appState?.rooms?.expert !== undefined,
+        appState?.rooms?.expert?.length > 0
+    );
     
     // 전문가 계정들의 선택된 그룹 - enabled된 전문가만 포함
-    if (appState.rooms.expert && appState.rooms.expert.length > 0) {
+    if (typeof appState !== 'undefined' && appState.rooms && appState.rooms.expert && appState.rooms.expert.length > 0) {
         appState.rooms.expert.forEach((expertRoom, expertIndex) => {
-            // enabled된 전문가만 메시지 전송에 포함
-            if (expertRoom && expertRoom.phone && expertRoom.enabled !== false && expertRoom.selectedGroups && expertRoom.selectedGroups.length > 0) {
-                expertRoom.selectedGroups.forEach((group) => {
-                    // 활성화된 그룹만 포함
-                    if (group.active !== false) {
+            // 전문가 계정 강제 활성화
+            if (expertRoom.enabled === false) {
+                console.log(`🔧 전문가 ${expertIndex} 강제 활성화: enabled false → true`);
+                expertRoom.enabled = true;
+            }
+            console.log(`🔍 전문가 ${expertIndex}:`, expertRoom);
+            console.log(`🔍 전문가 ${expertIndex} enabled:`, expertRoom?.enabled);
+            console.log(`🔍 전문가 ${expertIndex} selectedGroups:`, expertRoom?.selectedGroups);
+            
+            // enabled된 전문가만 메시지 전송에 포함 (조건 완전 완화)
+            if (expertRoom && expertRoom.selectedGroups && expertRoom.selectedGroups.length > 0) {
+                console.log(`🔍 전문가 ${expertIndex} enabled 상태:`, expertRoom.enabled);
+                console.log(`🔍 전문가 ${expertIndex} phone:`, expertRoom.phone);
+                if (expertRoom.enabled === false) {
+                    console.log(`⚠️ 전문가 ${expertIndex}는 enabled=false이지만 그룹 선택 확인을 진행합니다`);
+                }
+                if (!expertRoom.phone) {
+                    console.log(`⚠️ 전문가 ${expertIndex}는 phone이 없지만 그룹 선택 확인을 진행합니다`);
+                }
+                expertRoom.selectedGroups.forEach((group, groupIndex) => {
+                    console.log(`🔍 전문가 ${expertIndex} 그룹 ${groupIndex}:`, group);
+                    console.log(`🔍 전문가 ${expertIndex} 그룹 ${groupIndex} active:`, group.active);
+                    
+                    // 정확히 체크된(active: true) 그룹만 포함
+                    if (group.active === true) {
+                        console.log(`✅ 전문가 ${expertIndex} 그룹 ${groupIndex} 선택됨`);
                         selectedGroups.push({
                             phone: expertRoom.phone,
                             groupId: group.id,
@@ -1016,17 +1285,23 @@ function getSelectedGroups() {
     }
     
     // 화력별 계정들의 선택된 그룹 (현재 활성 화력만)
-    const currentFirepowerData = appState.rooms.firepower[appState.activeFirepower];
-    const currentFirepowerRoom = currentFirepowerData && currentFirepowerData[0];
+    let currentFirepowerData = null;
+    let currentFirepowerRoom = null;
+    
+    if (typeof appState !== 'undefined' && appState.rooms && appState.rooms.firepower && appState.activeFirepower !== undefined) {
+        currentFirepowerData = appState.rooms.firepower[appState.activeFirepower];
+        currentFirepowerRoom = currentFirepowerData && currentFirepowerData[0];
+    }
+    
     if (currentFirepowerRoom && currentFirepowerRoom.phone && currentFirepowerRoom.selectedGroups && currentFirepowerRoom.selectedGroups.length > 0) {
         currentFirepowerRoom.selectedGroups.forEach(group => {
-            if (group.active !== false) { // active가 false가 아니면 선택됨
+            if (group.active === true) { // 정확히 체크된 그룹만 선택
                 selectedGroups.push({
                     phone: currentFirepowerRoom.phone,
                     groupId: group.id,
                     groupTitle: group.name || group.title,
                     accountType: 'firepower',
-                    accountIndex: appState.activeFirepower
+                    accountIndex: (typeof appState !== 'undefined') ? appState.activeFirepower : 0
                 });
             }
         });
@@ -1042,6 +1317,22 @@ function updateSelectedGroupCount() {
         const selectedGroups = getSelectedGroups();
         console.log('Updated - Selected groups:', selectedGroups);
         console.log('Updated - Expert rooms:', appState.rooms.expert);
+        
+        // 🔍 전문가 그룹 상태 상세 디버깅
+        if (appState.rooms.expert && appState.rooms.expert.length > 0) {
+            appState.rooms.expert.forEach((room, index) => {
+                console.log(`🔍 전문가 ${index} 그룹 상태 분석:`, room.selectedGroups);
+                console.log(`🔍 전문가 ${index} enabled:`, room.enabled);
+                if (room.selectedGroups) {
+                    room.selectedGroups.forEach((group, gIndex) => {
+                        console.log(`🔍 전문가 ${index} 그룹 ${gIndex}: id=${group.id}, active=${group.active}, name=${group.name}`);
+                        if (group.active === true) {
+                            console.log(`✅ 전문가 ${index} 그룹 ${gIndex} 활성화됨!`);
+                        }
+                    });
+                }
+            });
+        }
         
         const countElement = document.getElementById('selectedGroupCount');
         if (countElement) {
@@ -1118,19 +1409,8 @@ function loadRoomMessages(roomId) {
 
 // 로컬 스토리지에 저장
 function saveToLocalStorage() {
-    // 🔥 저장 전 전문가 섹션에서 화력 계정 강제 제거
-    const cleanedExpertRooms = appState.rooms.expert.filter(room => {
-        if (!room || !room.phone) return true;
-        
-        const normalizedPhone = normalizePhone(room.phone);
-        const isFirepower = getKnownFirepowerAccounts().includes(normalizedPhone);
-        
-        if (isFirepower) {
-            console.log(`🔥 저장 시 화력 계정 제거: ${room.phone}`);
-            return false;
-        }
-        return true;
-    });
+    // 🎓 전문가 계정은 그대로 유지 (화력 계정 제거 로직 비활성화)
+    const cleanedExpertRooms = appState.rooms.expert;
     
     const stateToSave = {
         ...appState,
@@ -1142,45 +1422,42 @@ function saveToLocalStorage() {
     };
     
     localStorage.setItem('telegramWorldState', JSON.stringify(stateToSave));
-    console.log(`💾 저장 완료 - 전문가: ${cleanedExpertRooms.length}개 (화력 계정 제외)`);
+    console.log(`💾 저장 완료 - 전문가: ${cleanedExpertRooms.length}개`);
+    console.log('💾 저장된 데이터 크기:', JSON.stringify(stateToSave).length, 'bytes');
 }
 
 // 저장된 데이터 로드 (강화된 버전)
 async function loadSavedData() {
     try {
+        console.log('🔍 === loadSavedData 시작 ===');
         const savedData = localStorage.getItem('telegramWorldState');
+        console.log('🔍 localStorage에서 가져온 raw 데이터:', savedData ? '존재함' : '없음');
+        console.log('🔍 localStorage raw 데이터 길이:', savedData ? savedData.length : '0');
+        
         if (savedData) {
             const data = JSON.parse(savedData);
+            console.log('🔍 파싱된 데이터 전체:', data);
+            console.log('🔍 data.rooms:', data.rooms);
+            console.log('🔍 data.rooms.expert:', data.rooms ? data.rooms.expert : 'N/A');
             console.log('💾 Loading saved data from localStorage:', data);
             
             // 저장된 데이터로 상태 복원
             if (data.apis) appState.apis = data.apis;
             if (data.expertApis) appState.expertApis = data.expertApis;
             if (data.rooms) {
+                console.log('🔍 rooms 데이터 복원 시작');
+                console.log('🔍 복원 전 appState.rooms:', appState.rooms);
                 appState.rooms = data.rooms;
+                console.log('🔍 복원 후 appState.rooms:', appState.rooms);
+                console.log('🔍 복원 후 appState.rooms.expert:', appState.rooms.expert);
                 
-                // 🔥 로드 시 전문가 섹션에서 화력 계정 강제 제거
+                // 🎓 전문가 계정 보존 (화력 계정 제거 로직 비활성화)
                 if (Array.isArray(appState.rooms.expert)) {
-                    const originalCount = appState.rooms.expert.length;
-                    appState.rooms.expert = appState.rooms.expert.filter(room => {
-                        if (!room || !room.phone) return true;
-                        
-                        const normalizedPhone = normalizePhone(room.phone);
-                        const isFirepower = getKnownFirepowerAccounts().includes(normalizedPhone);
-                        
-                        if (isFirepower) {
-                            console.log(`🔥 로드 시 화력 계정 제거: ${room.phone}`);
-                            return false;
-                        }
-                        return true;
-                    });
-                    
-                    const cleanedCount = appState.rooms.expert.length;
-                    const removedCount = originalCount - cleanedCount;
-                    if (removedCount > 0) {
-                        console.log(`💾 로드 시 화력 계정 ${removedCount}개 제거됨`);
-                    }
+                    console.log('🔍 전문가 계정 배열 확인됨. 그대로 유지');
+                    console.log('🔍 전문가 계정 수:', appState.rooms.expert.length);
+                    console.log('🔍 전문가 계정 데이터:', appState.rooms.expert);
                 } else {
+                    console.log('🔍 전문가 계정이 배열이 아님. 빈 배열로 초기화');
                     appState.rooms.expert = [];
                 }
                 
@@ -1194,147 +1471,199 @@ async function loadSavedData() {
             if (data.templates) appState.templates = data.templates;
             
             // UI 업데이트
+            console.log('🔍 UI 업데이트 시작');
+            console.log('🔍 renderExpertRooms 호출 전 appState.rooms.expert:', appState.rooms.expert);
             renderApiGrid();
             renderExpertRooms();
             renderFirepowerRooms(appState.activeFirepower);
-            updateGroupCounts();
+            updateSelectedGroupCount();
+            console.log('🔍 UI 업데이트 완료');
             
             console.log('✅ Data loaded successfully from localStorage');
             
             // localStorage에 데이터가 있으면 서버 복원은 하지 않음 (중복 방지)
             console.log('📂 LocalStorage 데이터가 있으므로 서버 복원을 건너뜁니다.');
             
+            // 기존 데이터 마이그레이션 실행 (이미 저장된 데이터는 마이그레이션 불필요)
+            console.log('📂 LocalStorage 데이터 로드 완료 - 마이그레이션 및 재연결 건너뜀');
+            // migrateExistingGroupData(); // 새로고침 시 그룹 초기화 방지를 위해 비활성화
+            
         } else {
-            console.log('📂 No saved data found - checking server for logged accounts');
-            await loadAccountsFromServer();
+            console.log('📂 No saved data found - 서버 동기화 비활성화됨');
+            // await loadAccountsFromServer(); // 비활성화
+            
+            // 중요 계정들이 연결되어 있는지 확인하고 재연결 시도 (새 데이터만)
+            // await reconnectMissingAccounts(); // 비활성화
         }
-        
-        // 중요 계정들이 연결되어 있는지 확인하고 재연결 시도
-        await reconnectMissingAccounts();
         
     } catch (error) {
         console.error('❌ Error loading saved data:', error);
         // 데이터가 손상된 경우 초기화
         localStorage.removeItem('telegramWorldState');
-        console.log('🧹 Corrupted data cleared - checking server for logged accounts');
-        await loadAccountsFromServer();
+        console.log('🧹 Corrupted data cleared - 서버 동기화 비활성화됨');
+        // await loadAccountsFromServer(); // 비활성화
         
-        // 중요 계정들이 연결되어 있는지 확인하고 재연결 시도
-        await reconnectMissingAccounts();
+        // 중요 계정들이 연결되어 있는지 확인하고 재연결 시도 (에러 상황에서만)
+        // await reconnectMissingAccounts(); // 비활성화
     }
 }
 
+// 🚀 통합 서버 동기화 시스템 - 실제 로그인된 계정들을 자동으로 화력/전문가 섹션에 동기화
 async function loadAccountsFromServer() {
     try {
-        console.log('Checking server for logged accounts...');
-        const response = await fetch('http://127.0.0.1:5000/api/get-logged-accounts');
+        console.log('🔄 서버와 계정 동기화 시작...');
+        
+        // 1. 서버에서 로그인된 계정 목록 가져오기
+        const response = await fetch(`${API_BASE_URL}/get-logged-accounts`);
         const data = await response.json();
         
-        if (data.success && data.accounts.length > 0) {
-            console.log('Found logged accounts on server:', data.accounts);
-            
-            // 서버에서 로그인된 계정들을 복원
-            for (const account of data.accounts) {
-                if (account.status === 'logged_in') {
-                    console.log(`Restoring account: ${account.phone} (${account.user})`);
-                    
-                    // 계정의 그룹 목록을 가져와서 복원
-                    try {
-                        const groupResponse = await fetch(`http://127.0.0.1:5000/api/get-groups`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                phone: account.phone
-                            })
-                        });
-                        const groupData = await groupResponse.json();
-                        
-                        if (groupData.success && groupData.groups.length > 0) {
-                            // 🔧 계정을 마스터 계정 목록에 안전하게 저장
-                            const accountInfo = {
-                                phone: account.phone,
-                                user: account.user,
-                                groups: groupData.groups,
-                                status: 'logged_in'
-                            };
-                            
-                            // 마스터 계정 목록에 추가/업데이트
-                            addToMasterAccountList(accountInfo);
-                            
-                            // 설정된 타입에 따라 배치
-                            const accountType = getAccountTypeFromApiConfig(account.phone) || 'firepower';
-                            console.log(`📍 ${account.phone} 배치: ${accountType} (설정값 기준)`);
-                            
-                            // 🔧 새로운 시스템: 마스터 목록 기반 배치
-                            placeAccountInCorrectSection(accountInfo);
-                        } else {
-                            // 🔄 그룹이 없어도 모든 계정을 화력으로 배치
-                            const forceAllToFirepower = true;
-                            
-                            if (!forceAllToFirepower) {
-                                const expertRoom = {
-                                    phone: account.phone,
-                                    user: account.user,
-                                    selectedGroups: [],
-                                    availableGroups: [],
-                                    active: true,
-                                    enabled: true  // 개별 토글용 필드 추가
-                                };
-                                
-                                // 🔥 안전한 전문가 계정 추가 (화력 계정 차단)
-                                safeAddToExpertRooms(expertRoom);
-                                
-                                console.log(`Restored ${account.phone} with no groups`);
-                            } else {
-                                console.log(`Skipped ${account.phone} - already registered as firepower (no groups)`);
-                            }
-                        }
-                    } catch (groupError) {
-                        console.error(`Error loading groups for ${account.phone}:`, groupError);
-                        
-                        // 그룹 로드 실패해도 화력에 없는 계정은 복원
-                        const isFirepower = isFirepowerAccount(account.phone);
-                        
-                        if (!isFirepower) {
-                            const expertRoom = {
-                                phone: account.phone,
-                                user: account.user,
-                                selectedGroups: [],
-                                availableGroups: [],
-                                active: true,
-                                enabled: true  // 개별 토글용 필드 추가
-                            };
-                            
-                            // 🔥 안전한 전문가 계정 추가 (화력 계정 차단)
-                            safeAddToExpertRooms(expertRoom);
-                            
-                            console.log(`Restored ${account.phone} with failed group loading`);
-                        } else {
-                            console.log(`Skipped ${account.phone} - already registered as firepower (group load failed)`);
-                        }
-                    }
-                }
-            }
-            
-            // 데이터 저장 및 UI 업데이트
-            saveToLocalStorage();
-            renderExpertRooms();
-            renderFirepowerRooms(appState.activeFirepower);
-            renderFirepowerAccountsList();
-            
-            // 서버에서 계정 로드 후 화력 계정 중복 정리
-            console.log('🧹 서버 계정 로드 후 화력 계정 정리...');
-            cleanupDuplicateAccounts();
-            
-            console.log('Accounts restored from server successfully');
-        } else {
-            console.log('No logged accounts found on server');
+        if (!data.success) {
+            console.error('❌ 서버에서 계정 정보를 가져올 수 없습니다:', data.error);
+            return;
         }
         
+        if (!data.accounts || data.accounts.length === 0) {
+            console.log('📭 서버에 로그인된 계정이 없습니다.');
+            return;
+        }
+        
+        console.log(`📊 서버에서 ${data.accounts.length}개 계정 발견`);
+        
+        // 2. 기존 화력 섹션 초기화 (서버 데이터로 완전 동기화)
+        appState.rooms.firepower = {};
+        
+        // 3. 각 계정별로 그룹 정보와 함께 동기화
+        const syncedAccounts = [];
+        let firepowerCount = 1; // 화력 번호 자동 할당
+        
+        for (const account of data.accounts) {
+            if (account.status !== 'logged_in' || !account.user) {
+                console.log(`⚠️ ${account.phone} - 로그인 상태가 아니거나 사용자 정보 없음`);
+                continue;
+            }
+            
+            try {
+                // 4. 각 계정의 그룹 목록 가져오기
+                const groupResponse = await fetch(`${API_BASE_URL}/get-groups`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: account.phone })
+                });
+                
+                const groupData = await groupResponse.json();
+                const groups = groupData.success ? groupData.groups : [];
+                
+                const accountInfo = {
+                    phone: account.phone,
+                    user: {
+                        id: account.user.id,
+                        username: account.user.username,
+                        first_name: account.user.first_name,
+                        phone: account.user.phone
+                    },
+                    groups: groups,
+                    status: 'logged_in',
+                    syncedAt: new Date().toISOString()
+                };
+                
+                // 5. 전문가 계정 확인 후 배치 결정
+                const isExpertAccount = appState.rooms.expert && 
+                    appState.rooms.expert.some(expertRoom => expertRoom.phone === account.phone);
+                
+                if (isExpertAccount) {
+                    console.log(`🎓 ${account.phone} (${account.user.first_name}) → 전문가 계정이므로 화력 배치 건너뜀`);
+                    syncedAccounts.push(accountInfo);
+                } else {
+                    // 기존 화력 계정이 있는지 확인
+                    let existingRoom = null;
+                    Object.keys(appState.rooms.firepower).forEach(key => {
+                        const room = appState.rooms.firepower[key][0];
+                        if (room && room.phone === account.phone) {
+                            existingRoom = room;
+                        }
+                    });
+                    
+                    // 화력 섹션에 자동 배치 (1번부터 순서대로)
+                    const firepowerRoom = {
+                        phone: account.phone,
+                        user: account.user,
+                        selectedGroups: existingRoom ? 
+                            normalizeGroupData(groups, true) : // 기존 계정이 있으면 상태 보존
+                            normalizeGroupData(groups, false), // 새 계정이면 기본 선택 해제
+                        availableGroups: groups,
+                        active: true,
+                        firepowerNumber: firepowerCount
+                    };
+                    
+                    // 기존 선택 상태를 새 그룹에 적용
+                    if (existingRoom && existingRoom.selectedGroups) {
+                        firepowerRoom.selectedGroups.forEach(newGroup => {
+                            const existingGroup = existingRoom.selectedGroups.find(g => g.id === newGroup.id);
+                            if (existingGroup) {
+                                newGroup.active = existingGroup.active; // 기존 선택 상태 복원
+                            }
+                        });
+                    }
+                    
+                    // 화력 배치
+                    appState.rooms.firepower[firepowerCount] = [firepowerRoom];
+                    
+                    console.log(`✅ ${account.phone} (${account.user.first_name}) → 화력 ${firepowerCount}번에 배치 (${groups.length}개 그룹)`);
+                    
+                    syncedAccounts.push(accountInfo);
+                    firepowerCount++;
+                }
+                
+                // 최대 30개까지만 배치
+                if (firepowerCount > 30) {
+                    console.log('⚠️ 화력 섹션 최대 용량(30개) 도달');
+                    break;
+                }
+                
+            } catch (groupError) {
+                console.error(`❌ ${account.phone} 그룹 정보 로드 실패:`, groupError);
+                
+                // 그룹 정보를 가져올 수 없어도 기본 계정으로 배치
+                const basicAccountInfo = {
+                    phone: account.phone,
+                    user: account.user,
+                    selectedGroups: [],
+                    availableGroups: [],
+                    active: true,
+                    firepowerNumber: firepowerCount
+                };
+                
+                appState.rooms.firepower[firepowerCount] = [basicAccountInfo];
+                
+                console.log(`✅ ${account.phone} (${account.user.first_name}) → 화력 ${firepowerCount}번에 기본 배치 (그룹 정보 없음)`);
+                firepowerCount++;
+            }
+        }
+        
+        // 6. UI 업데이트
+        console.log('🎨 UI 업데이트 중...');
+        saveToLocalStorage(); // 상태 저장
+        renderFirepowerRooms(appState.activeFirepower);
+        renderExpertRooms();
+        renderFirepowerAccountsList();
+        
+        // 7. 동기화 완료 알림
+        const syncMessage = `🎉 동기화 완료: ${syncedAccounts.length}개 계정이 화력 섹션에 자동 배치되었습니다.`;
+        console.log(syncMessage);
+        
+        // 성공 알림 표시 - 팝업 비활성화
+        // if (typeof showSuccessMessage === 'function') {
+        //     showSuccessMessage(syncMessage);
+        // }
+        
+        return syncedAccounts;
+        
     } catch (error) {
-        console.error('Error loading accounts from server:', error);
+        console.error('❌ 서버 동기화 중 오류 발생:', error);
+        if (typeof showErrorMessage === 'function') {
+            showErrorMessage('서버와의 동기화 중 오류가 발생했습니다.');
+        }
+        return [];
     }
 }
 
@@ -1399,16 +1728,16 @@ async function reconnectMissingAccounts() {
                         if (groupData.success && groupData.groups && groupData.groups.length > 0) {
                             console.log(`📋 Restored ${groupData.groups.length} groups for ${phone}`);
                             
-                            // 전문가 섹션에 복원
+                            // 전문가 섹션에 복원 (첫 번째 그룹 자동 활성화)
+                            const normalizedGroups = normalizeGroupData(groupData.groups, false);
+                            if (normalizedGroups.length > 0) {
+                                normalizedGroups[0].active = true; // 첫 번째 그룹 자동 선택
+                            }
+                            
                             const expertRoom = {
                                 phone: phone,
                                 user: connectResult.user || { first_name: phone.slice(-4) },
-                                selectedGroups: groupData.groups.map(group => ({
-                                    id: group.id,
-                                    name: group.title,
-                                    title: group.title,
-                                    active: true
-                                })),
+                                selectedGroups: normalizedGroups,
                                 availableGroups: groupData.groups,
                                 active: true,
                                 enabled: true  // 개별 토글용 필드 추가
@@ -1448,26 +1777,40 @@ async function reconnectMissingAccounts() {
 
 // 전문가 API 저장
 function saveExpertApi() {
+    console.log('🔍 === saveExpertApi 시작 ===');
     const apiKey = elements.expertApiKeyInput.value.trim();
     const botName = elements.expertBotNameInput.value.trim();
     const groupId = elements.expertGroupIdInput.value.trim();
+    
+    console.log('🔍 입력된 데이터:', { apiKey: apiKey ? '입력됨' : '없음', botName, groupId });
     
     if (!apiKey || !botName || !groupId) {
         alert('모든 정보를 입력해주세요.');
         return;
     }
     
-    appState.expertApis.push({
+    const newExpertApi = {
         apiKey,
         botName,
         groupId,
         active: true
-    });
+    };
+    
+    console.log('🔍 추가할 전문가 API:', newExpertApi);
+    console.log('🔍 추가 전 appState.expertApis:', appState.expertApis);
+    console.log('🔍 추가 전 appState.rooms.expert:', appState.rooms.expert);
+    
+    appState.expertApis.push(newExpertApi);
+    
+    console.log('🔍 추가 후 appState.expertApis:', appState.expertApis);
+    console.log('🔍 renderExpertRooms 호출');
     
     renderExpertRooms();
     elements.expertApiModal.classList.remove('active');
     clearExpertApiModal();
     saveToLocalStorage();
+    
+    console.log('🔍 saveExpertApi 완료');
 }
 
 // 전문가 API 모달 초기화
@@ -1479,18 +1822,44 @@ function clearExpertApiModal() {
 
 // 전문가 방 렌더링
 function renderExpertRooms() {
-    if (!elements.expertRooms) return;
+    console.log('🔍 === renderExpertRooms 시작 ===');
+    console.log('🔍 elements.expertRooms 존재:', !!elements.expertRooms);
     
-    console.log('전문가 섹션 렌더링 시작. 계정 수:', appState.rooms.expert.length);
-    console.log('전문가 계정 데이터:', appState.rooms.expert);
+    if (!elements.expertRooms) {
+        console.error('❌ elements.expertRooms가 존재하지 않습니다!');
+        return;
+    }
+    
+    console.log('🔍 appState.rooms 전체:', appState.rooms);
+    console.log('🔍 appState.rooms.expert 타입:', typeof appState.rooms.expert);
+    console.log('🔍 appState.rooms.expert 배열인가?', Array.isArray(appState.rooms.expert));
+    console.log('🔍 전문가 섹션 렌더링 시작. 계정 수:', appState.rooms.expert ? appState.rooms.expert.length : 'undefined');
+    console.log('🔍 전문가 계정 데이터:', appState.rooms.expert);
     
     // 마스터 계정 시스템 사용으로 인해 자동 제거 비활성화
     // 이제 사용자가 API 관리에서 직접 계정 타입을 설정합니다.
     
     elements.expertRooms.innerHTML = '';
+    console.log('🔍 expertRooms DOM 요소 초기화 완료');
     
     if (appState.rooms.expert && appState.rooms.expert.length > 0) {
+        console.log('🔍 전문가 계정이 존재함. 렌더링 시작...');
         appState.rooms.expert.forEach((room, index) => {
+            console.log(`🔍 전문가 계정 [${index}] 렌더링:`, room);
+            
+            // 🔍 그룹 상태 즉시 확인 (강화된 로그)
+            console.log(`🔍 전문가 ${index} selectedGroups 존재:`, !!room.selectedGroups);
+            console.log(`🔍 전문가 ${index} selectedGroups 길이:`, room.selectedGroups ? room.selectedGroups.length : 'N/A');
+            console.log(`🔍 전문가 ${index} selectedGroups 전체:`, room.selectedGroups);
+            
+            if (room.selectedGroups && room.selectedGroups.length > 0) {
+                console.log(`🔍 전문가 ${index} 그룹 즉시 분석:`);
+                room.selectedGroups.forEach((group, gIndex) => {
+                    console.log(`  그룹 ${gIndex}: id=${group.id}, active=${group.active}, name=${group.name || group.title}`);
+                });
+            } else {
+                console.log(`⚠️ 전문가 ${index} 그룹이 없거나 빈 배열입니다`);
+            }
             const roomCard = document.createElement('div');
             roomCard.className = 'room-card expert-card';
             
@@ -1532,7 +1901,13 @@ function renderExpertRooms() {
             // 그룹 목록 렌더링
             renderExpertGroups(index, room);
         });
+        console.log('🔍 전문가 계정 렌더링 완료');
     } else {
+        console.log('🔍 전문가 계정이 없음. 빈 상태 메시지 표시');
+        console.log('🔍 조건 체크:', {
+            'appState.rooms.expert 존재': !!appState.rooms.expert,
+            'appState.rooms.expert.length': appState.rooms.expert ? appState.rooms.expert.length : 'N/A'
+        });
         elements.expertRooms.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">등록된 API가 없습니다</p>';
     }
     
@@ -1617,19 +1992,34 @@ async function refreshExpertGroups(index) {
         const data = await response.json();
         console.log(`📊 ${room.phone} 그룹 응답:`, data);
         
+        // 🔍 DEBUGGING: 각 그룹의 title 값 상세 확인
+        if (data.success && data.groups) {
+            data.groups.forEach((group, index) => {
+                console.log(`[DEBUG] Group ${index}: ID=${group.id}, title=${JSON.stringify(group.title)} (type: ${typeof group.title})`);
+                if (group.title === 'undefined' || group.title === undefined) {
+                    console.error(`❌ FOUND UNDEFINED! Group ${group.id} has undefined title`);
+                }
+            });
+        }
+        
         if (data.success) {
-            // 기존 선택 상태 보존
-            const existingSelection = room.selectedGroups ? room.selectedGroups.map(g => g.id) : [];
-            console.log(`💾 기존 선택된 그룹 ID:`, existingSelection);
+            // 기존 선택 상태 보존 - active 상태까지 고려
+            const existingSelectedGroups = room.selectedGroups || [];
+            const existingSelectionMap = new Map();
+            existingSelectedGroups.forEach(g => {
+                existingSelectionMap.set(g.id, g.active !== false); // 기존 active 상태 보존
+            });
+            console.log(`💾 기존 선택된 그룹 상태:`, Array.from(existingSelectionMap.entries()));
             
             // 새로운 그룹 목록에서 기존 선택 상태 유지
             room.selectedGroups = data.groups.map(group => {
-                const wasSelected = existingSelection.includes(group.id);
+                const wasSelected = existingSelectionMap.has(group.id);
+                const wasActive = existingSelectionMap.get(group.id) || false;
                 return {
                     id: group.id,
-                    name: group.title,
-                    title: group.title,
-                    active: wasSelected || existingSelection.length === 0 // 첫 로드시에는 모두 선택
+                    name: group.title || group.name || '그룹명 없음',
+                    title: group.title || group.name || '그룹명 없음',
+                    active: wasSelected ? wasActive : false // 기존에 선택되었고 활성화된 경우만 true
                 };
             });
             
@@ -2179,7 +2569,7 @@ async function connectTelegramAPI() {
                 // 자동으로 그룹 목록 불러오기
                 setTimeout(() => {
                     loadTelegramGroups();
-                }, 500);
+                }, 800);
             }
         } else {
             showConnectionStatus(data.error || '연결 실패', 'error');
@@ -2225,7 +2615,7 @@ async function verifyTelegramCode() {
             // 자동으로 그룹 목록 불러오기
             setTimeout(() => {
                 loadTelegramGroups();
-            }, 500);
+            }, 800);
         } else if (data.require_password) {
             // 2FA 비밀번호 필요
             showConnectionStatus(data.message, 'info');
@@ -2306,7 +2696,7 @@ async function verifyTelegramPassword() {
             // 자동으로 그룹 목록 불러오기
             setTimeout(() => {
                 loadTelegramGroups();
-            }, 500);
+            }, 800);
         } else {
             showConnectionStatus(data.error || '2FA 인증 실패', 'error');
         }
@@ -2433,7 +2823,55 @@ function saveSelectedGroups() {
     saveToLocalStorage();
 }
 
-// 화력별 그룹 불러오기
+// 그룹 데이터 정규화 함수 (name/title 속성 일관성 보장)
+function normalizeGroupData(groups, preserveActiveState = true) {
+    return groups.map(group => ({
+        id: group.id,
+        title: group.title || group.name || '그룹명 없음',
+        name: group.name || group.title || '그룹명 없음',
+        active: group.active !== undefined ? group.active : (preserveActiveState ? true : false)  // 데이터 마이그레이션시에는 기존 상태가 없으면 true(이전에 선택되었던 것으로 간주), 새 그룹은 false
+    }));
+}
+
+// 기존 데이터 마이그레이션 (name/title 속성 누락 수정)
+function migrateExistingGroupData() {
+    console.log('🔄 기존 그룹 데이터 마이그레이션 시작...');
+    
+    let migrationCount = 0;
+    
+    // 전문가 계정들 마이그레이션
+    if (appState.rooms.expert && appState.rooms.expert.length > 0) {
+        appState.rooms.expert.forEach((room, index) => {
+            if (room.selectedGroups && room.selectedGroups.length > 0) {
+                const originalCount = room.selectedGroups.length;
+                room.selectedGroups = normalizeGroupData(room.selectedGroups, true); // 기존 상태 보존
+                console.log(`✅ 전문가 ${index} 그룹 데이터 정규화: ${originalCount}개`);
+                migrationCount++;
+            }
+        });
+    }
+    
+    // 화력 계정들 마이그레이션
+    Object.keys(appState.rooms.firepower).forEach(firepower => {
+        const firepowerData = appState.rooms.firepower[firepower];
+        if (firepowerData && firepowerData[0] && firepowerData[0].selectedGroups) {
+            const room = firepowerData[0];
+            const originalCount = room.selectedGroups.length;
+            room.selectedGroups = normalizeGroupData(room.selectedGroups, true); // 기존 상태 보존
+            console.log(`✅ 화력 ${firepower} 그룹 데이터 정규화: ${originalCount}개`);
+            migrationCount++;
+        }
+    });
+    
+    if (migrationCount > 0) {
+        console.log(`🎉 마이그레이션 완료: ${migrationCount}개 계정의 그룹 데이터 정규화`);
+        saveToLocalStorage(); // 정규화된 데이터 저장
+    } else {
+        console.log('✅ 마이그레이션 불필요: 모든 데이터가 이미 정규화됨');
+    }
+}
+
+// 화력별 그룹 불러오기 (인텔리전트 동기화 적용)
 async function loadGroupsForFirepower(firepower) {
     const room = appState.rooms.firepower[firepower]?.[0];
     
@@ -2442,6 +2880,8 @@ async function loadGroupsForFirepower(firepower) {
     }
     
     try {
+        console.log(`🔄 화력 ${firepower} 그룹 새로고침 시작: ${room.phone}`);
+        
         const response = await fetch(`${API_BASE_URL}/get-groups`, {
             method: 'POST',
             headers: {
@@ -2455,36 +2895,38 @@ async function loadGroupsForFirepower(firepower) {
         const data = await response.json();
         
         if (data.success) {
-            // 기존에 선택된 그룹 ID들 저장
-            const previouslySelectedIds = room.selectedGroups ? 
-                room.selectedGroups.map(g => g.id) : [];
+            console.log(`📊 화력 ${firepower} 그룹 동기화 분석: ${room.phone} - ${data.groups.length}개 그룹 발견`);
+            console.log(`🔍 서버에서 받은 원본 그룹 데이터 (처음 3개):`, data.groups.slice(0, 3));
             
-            console.log(`Firepower ${firepower}: Got ${data.groups.length} groups, ${previouslySelectedIds.length} previously selected`);
-            
-            // 기존 선택된 그룹이 없다면 모든 그룹을 선택 상태로 설정 (최초 로드)
-            if (previouslySelectedIds.length === 0) {
-                room.selectedGroups = data.groups.map(group => ({
-                    id: group.id,
-                    title: group.title,
-                    name: group.title,
-                    active: true
-                }));
-                console.log(`Firepower ${firepower}: First time load, selected all ${data.groups.length} groups`);
+            // 최초 로드인 경우 (선택된 그룹이 없음)
+            if (!room.selectedGroups || room.selectedGroups.length === 0) {
+                // 서버에서 받은 그룹 데이터 정규화
+                const normalizedGroups = normalizeGroupData(data.groups, false);
+                room.selectedGroups = normalizedGroups;
+                room.availableGroups = data.groups;
+                console.log(`🆕 화력 ${firepower} 최초 로드: ${data.groups.length}개 그룹 모두 선택`);
             } else {
-                // 기존에 선택된 그룹 중에서 현재도 존재하는 그룹만 유지
-                room.selectedGroups = data.groups
-                    .filter(group => previouslySelectedIds.includes(group.id))
-                    .map(group => ({
-                        id: group.id,
-                        title: group.title,
-                        name: group.title,
-                        active: true
-                    }));
-                console.log(`Firepower ${firepower}: Updated, ${room.selectedGroups.length} groups remain selected`);
+                // 기존 데이터가 있는 경우 인텔리전트 동기화 실행
+                const syncResult = await intelligentGroupSync(room, data.groups, room.phone, 'firepower', firepower);
+                
+                // 결과 적용
+                room.selectedGroups = syncResult.selectedGroups;
+                room.availableGroups = data.groups;
+                
+                // 변경사항 로깅 및 사용자 알림
+                if (syncResult.removedGroups.length > 0) {
+                    console.log(`🗑️ 화력 ${firepower} 탈퇴 그룹 자동 제거:`, syncResult.removedGroups.map(g => g.name));
+                    showSyncStatusMessage(`${syncResult.removedGroups.length}개 탈퇴 그룹 제거됨`, 'warning');
+                }
+                if (syncResult.newGroups.length > 0) {
+                    console.log(`🆕 화력 ${firepower} 신규 그룹 발견:`, syncResult.newGroups.map(g => g.title));
+                    showNewGroupsNotification(syncResult.newGroups, room.phone, 'firepower', firepower);
+                    showSyncStatusMessage(`${syncResult.newGroups.length}개 신규 그룹 발견`, 'info');
+                }
+                
+                console.log(`✅ 화력 ${firepower} 동기화 완료: ${syncResult.selectedGroups.length}개 그룹 유지`);
+                showSyncStatusMessage(`동기화 완료: ${syncResult.selectedGroups.length}개 그룹 유지`, 'success');
             }
-            
-            // 사용 가능한 모든 그룹 저장 (그룹 선택 모달에서 사용)
-            room.availableGroups = data.groups;
             
             renderFirepowerRooms(firepower);
             renderFirepowerAccountsList(); // 화력 리스트 업데이트
@@ -3172,8 +3614,8 @@ async function sendTemplateToFirepower(templateIndex) {
     for (let i = 1; i <= 30; i++) {
         const room = appState.rooms.firepower[i]?.[0];
         if (room && room.phone && room.selectedGroups && room.selectedGroups.length > 0) {
-            // active가 true인 그룹만 필터링
-            const activeGroups = room.selectedGroups.filter(g => g.active !== false);
+            // 정확히 체크된(active: true) 그룹만 필터링
+            const activeGroups = room.selectedGroups.filter(g => g.active === true);
             if (activeGroups.length > 0) {
                 allTargets.push({
                     firepower: i,
@@ -3246,6 +3688,11 @@ async function sendTemplateToFirepower(templateIndex) {
                 groupCount: groupIds.length
             });
         }
+        
+        // 🔥 화력 전송에도 속도 딜레이 적용
+        const currentSpeed = getCurrentMessageSpeed();
+        console.log(`⚡ 화력 전송 속도 적용: ${currentSpeed}ms`);
+        await new Promise(resolve => setTimeout(resolve, currentSpeed));
     }
     
     // 결과 표시
@@ -3766,6 +4213,197 @@ async function showProfitVerificationModal(btnNumber, capacity) {
     }
 }
 
+// 세션 레벨 이미지 순서 관리 함수들
+function initializeImageSessionForCapacity(capacity, images) {
+    const session = appState.profitImageSession;
+    
+    // 이미 이 용량에 대해 셔플된 순서가 있는지 확인
+    if (!session.shuffledImagesByCapacity[capacity] || session.shuffledImagesByCapacity[capacity].length !== images.length) {
+        // 새로 셔플하기
+        console.log(`🎲 용량 ${capacity}: 새로운 이미지 순서 생성 (${images.length}개 이미지)`);
+        
+        // Fisher-Yates 셔플 알고리즘
+        const shuffled = [...images];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        
+        session.shuffledImagesByCapacity[capacity] = shuffled;
+        session.usedImageIndices[capacity] = 0; // 사용 인덱스 초기화
+        session.sessionStartTime = Date.now();
+        
+        console.log(`✅ 용량 ${capacity}: 이미지 순서 초기화 완료`);
+    } else {
+        console.log(`🔄 용량 ${capacity}: 기존 이미지 순서 유지 (사용된 개수: ${session.usedImageIndices[capacity]})`);
+    }
+}
+
+function getNextUniqueImageForCapacity(capacity) {
+    const session = appState.profitImageSession;
+    const shuffledImages = session.shuffledImagesByCapacity[capacity];
+    const currentIndex = session.usedImageIndices[capacity];
+    
+    if (!shuffledImages || shuffledImages.length === 0) {
+        console.error(`❌ 용량 ${capacity}에 대한 셔플된 이미지가 없습니다.`);
+        return null;
+    }
+    
+    // 순환: 모든 이미지를 사용했으면 다시 처음부터
+    const imageIndex = currentIndex % shuffledImages.length;
+    const selectedImage = shuffledImages[imageIndex];
+    
+    // 다음 사용을 위해 인덱스 증가
+    session.usedImageIndices[capacity] = currentIndex + 1;
+    
+    console.log(`📷 용량 ${capacity}: ${imageIndex + 1}/${shuffledImages.length}번째 이미지 선택 (총 사용: ${session.usedImageIndices[capacity]}개)`);
+    
+    return {
+        image: selectedImage,
+        index: imageIndex,
+        totalUsed: session.usedImageIndices[capacity]
+    };
+}
+
+function resetImageSessionForCapacity(capacity) {
+    const session = appState.profitImageSession;
+    delete session.shuffledImagesByCapacity[capacity];
+    delete session.usedImageIndices[capacity];
+    console.log(`🔄 용량 ${capacity}: 이미지 세션 초기화`);
+}
+
+function resetAllImageSessions() {
+    appState.profitImageSession = {
+        shuffledImagesByCapacity: {},
+        usedImageIndices: {},
+        sessionStartTime: Date.now()
+    };
+    console.log(`🔄 모든 용량의 이미지 세션 초기화`);
+}
+
+// 메시지 전송 속도 관리 함수들
+function loadMessageSpeed() {
+    try {
+        console.log(`🔍 [DEBUG] loadMessageSpeed() 호출 - 현재 appState.messageSpeed:`, appState.messageSpeed);
+        const saved = localStorage.getItem('messageSpeed');
+        console.log(`🔍 [DEBUG] localStorage에서 가져온 값: ${saved}`);
+        
+        if (saved) {
+            const speed = parseInt(saved);
+            console.log(`🔍 [DEBUG] 파싱된 속도 값: ${speed}`);
+            
+            if (speed >= 100 && speed <= 5000) {
+                appState.messageSpeed.current = speed;
+                console.log(`⚡ 저장된 메시지 속도 로드: ${speed}ms`);
+                console.log(`🔍 [DEBUG] 로드 후 appState.messageSpeed:`, appState.messageSpeed);
+            } else {
+                console.log(`⚠️ [DEBUG] 속도 값이 범위를 벗어남 (100-5000ms): ${speed}ms`);
+            }
+        } else {
+            console.log(`🔍 [DEBUG] localStorage에 저장된 속도 없음, 기본값 사용: ${appState.messageSpeed.current}ms`);
+        }
+    } catch (error) {
+        console.error('속도 설정 로드 실패:', error);
+    }
+}
+
+function saveMessageSpeed(speed) {
+    try {
+        console.log(`🔍 [DEBUG] saveMessageSpeed() 호출 - 저장할 속도: ${speed}ms`);
+        console.log(`🔍 [DEBUG] 저장 전 appState.messageSpeed:`, appState.messageSpeed);
+        
+        localStorage.setItem('messageSpeed', speed.toString());
+        appState.messageSpeed.current = speed;
+        
+        console.log(`⚡ 메시지 속도 저장: ${speed}ms`);
+        console.log(`🔍 [DEBUG] 저장 후 appState.messageSpeed:`, appState.messageSpeed);
+        console.log(`🔍 [DEBUG] localStorage 확인:`, localStorage.getItem('messageSpeed'));
+        
+        updateSpeedDisplay();
+    } catch (error) {
+        console.error('속도 설정 저장 실패:', error);
+    }
+}
+
+function getCurrentMessageSpeed() {
+    const speed = appState.messageSpeed.current;
+    console.log(`🔍 [DEBUG] getCurrentMessageSpeed() 호출 - 현재 속도: ${speed}ms`);
+    return speed;
+}
+
+function updateSpeedDisplay() {
+    const current = getCurrentMessageSpeed();
+    console.log(`🔍 [DEBUG] updateSpeedDisplay() 호출 - 현재 속도: ${current}ms`);
+    
+    const display = document.getElementById('currentSpeedDisplay');
+    console.log(`🔍 [DEBUG] currentSpeedDisplay 요소:`, display);
+    
+    if (display) {
+        const displayText = `${(current / 1000).toFixed(1)}초`;
+        display.textContent = displayText;
+        console.log(`🔍 [DEBUG] 화면 표시 텍스트 업데이트: ${displayText}`);
+    } else {
+        console.log(`⚠️ [DEBUG] currentSpeedDisplay 요소를 찾을 수 없음`);
+    }
+}
+
+function formatSpeedText(ms) {
+    return `${(ms / 1000).toFixed(1)}초`;
+}
+
+// 속도 설정 모달 관리
+function showSpeedSettingsModal() {
+    const modal = document.getElementById('speedSettingsModal');
+    const currentInput = document.getElementById('customSpeedInput');
+    const currentSpeed = getCurrentMessageSpeed();
+    
+    // 현재 속도로 입력값 설정
+    if (currentInput) {
+        currentInput.value = currentSpeed;
+        updateSpeedPreview();
+    }
+    
+    // 현재 속도에 맞는 프리셋 버튼 활성화
+    updateActivePresetButton(currentSpeed);
+    
+    // 현재 속도 표시 업데이트
+    updateSpeedDisplay();
+    
+    if (modal) {
+        modal.style.display = 'block';
+    }
+}
+
+function hideSpeedSettingsModal() {
+    const modal = document.getElementById('speedSettingsModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function updateActivePresetButton(speed) {
+    // 모든 프리셋 버튼의 active 클래스 제거
+    document.querySelectorAll('.speed-preset-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // 현재 속도와 일치하는 버튼에 active 클래스 추가
+    const matchingBtn = document.querySelector(`[data-speed="${speed}"]`);
+    if (matchingBtn) {
+        matchingBtn.classList.add('active');
+    }
+}
+
+function updateSpeedPreview() {
+    const input = document.getElementById('customSpeedInput');
+    const preview = document.getElementById('speedPreview');
+    
+    if (input && preview) {
+        const speed = parseInt(input.value) || 800;
+        preview.textContent = `= ${formatSpeedText(speed)}`;
+    }
+}
+
 // 클립보드 매니저에서 이미지 가져오기
 async function getImagesFromClipboardManager(capacity) {
     try {
@@ -3808,7 +4446,7 @@ async function sendProfitVerificationAuto(capacity) {
             
             const room = firepowerData[0];
             if (room && room.phone && room.selectedGroups && room.selectedGroups.length > 0) {
-                const activeGroups = room.selectedGroups.filter(g => g.active !== false);
+                const activeGroups = room.selectedGroups.filter(g => g.active === true);
                 if (activeGroups.length > 0) {
                     targetAccounts.push({
                         phone: room.phone,
@@ -3837,13 +4475,32 @@ async function sendProfitVerificationAuto(capacity) {
             return;
         }
         
-        // 진짜 랜덤 선택을 위한 개선된 로직
+        // 세션 레벨 중복 방지 시스템 초기화
+        initializeImageSessionForCapacity(capacity, allImages);
+        
+        console.log(`🎯 용량 ${capacity}: 총 ${allImages.length}개 이미지, 계정 ${targetAccounts.length}개`);
+        
+        // 이미지가 계정 수보다 적으면 경고 메시지 출력
+        if (allImages.length < targetAccounts.length) {
+            console.warn(`⚠️ 이미지 ${allImages.length}개가 계정 ${targetAccounts.length}개보다 적습니다. 순환 사용됩니다.`);
+        } else {
+            console.log(`✅ 이미지 충분: ${allImages.length}개 ≥ 계정 ${targetAccounts.length}개 → 완전 중복 방지 가능`);
+        }
+        
         for (let i = 0; i < targetAccounts.length; i++) {
             const account = targetAccounts[i];
             try {
-                // 매번 완전히 랜덤하게 이미지 선택
-                const randomIndex = Math.floor(Math.random() * allImages.length);
-                const selectedImage = allImages[randomIndex];
+                // 세션에서 다음 고유 이미지 가져오기
+                const imageData = getNextUniqueImageForCapacity(capacity);
+                if (!imageData) {
+                    console.error(`❌ 계정 ${account.phone}: 이미지 가져오기 실패`);
+                    continue;
+                }
+                
+                const { image: selectedImage, index: imageIndex, totalUsed } = imageData;
+                
+                console.log(`📱 [${i+1}/${targetAccounts.length}] ${account.phone}: 용량 ${capacity} 이미지 ${imageIndex + 1}번 선택`);
+                console.log(`   └─ 화력: ${account.firepower}번, 총 사용된 이미지: ${totalUsed}개`);
                 
                 const response = await fetch(`${API_BASE_URL}/send-images`, {
                     method: 'POST',
@@ -3864,16 +4521,16 @@ async function sendProfitVerificationAuto(capacity) {
                 const result = await response.json();
                 if (result.success) {
                     successCount++;
-                    console.log(`Profit verification sent to ${account.phone} with random image ${randomIndex + 1}/${allImages.length}`);
+                    console.log(`✅ 수익인증 전송 완료: ${account.phone} → 용량 ${capacity} 이미지 ${imageIndex + 1}번`);
                 } else {
-                    console.error(`Failed to send to ${account.phone}:`, result.error);
+                    console.error(`❌ 전송 실패 ${account.phone}:`, result.error);
                 }
             } catch (error) {
                 console.error(`Error sending to ${account.phone}:`, error);
             }
             
-            // 전송 간격
-            await new Promise(resolve => setTimeout(resolve, 600));
+            // 전송 간격 (동적 속도 적용)
+            await new Promise(resolve => setTimeout(resolve, getCurrentMessageSpeed()));
         }
         
         // 전송 완료 메시지도 제거하여 완전히 조용히 전송
@@ -4215,17 +4872,63 @@ function getFirepowerGroups() {
 
 // 선택된 그룹만 가져오기
 function getSelectedGroups() {
-    const groups = [];
-    const checkboxes = document.querySelectorAll('#profitSelectedGroups input[type="checkbox"]:checked');
+    console.log('🔍🔍🔍 실제 getSelectedGroups 함수 호출됨! 🔍🔍🔍');
     
-    checkboxes.forEach(checkbox => {
-        groups.push({
-            id: checkbox.value,
-            phone: checkbox.dataset.phone
+    const selectedGroups = [];
+    
+    // 전문가 계정들의 선택된 그룹 확인
+    if (typeof appState !== 'undefined' && appState.rooms && appState.rooms.expert && appState.rooms.expert.length > 0) {
+        console.log('🔍 전문가 계정 확인 중...');
+        appState.rooms.expert.forEach((expertRoom, expertIndex) => {
+            console.log(`🔍 전문가 ${expertIndex}:`, expertRoom);
+            console.log(`🔍 전문가 ${expertIndex} enabled:`, expertRoom.enabled);
+            
+            if (expertRoom && expertRoom.selectedGroups && expertRoom.selectedGroups.length > 0) {
+                expertRoom.selectedGroups.forEach((group, groupIndex) => {
+                    console.log(`🔍 전문가 ${expertIndex} 그룹 ${groupIndex}:`, group);
+                    console.log(`🔍 전문가 ${expertIndex} 그룹 ${groupIndex} active:`, group.active);
+                    
+                    if (group.active === true) {
+                        console.log(`✅ 전문가 ${expertIndex} 그룹 ${groupIndex} 선택됨!`);
+                        selectedGroups.push({
+                            phone: expertRoom.phone,
+                            groupId: group.id,
+                            groupTitle: group.name || group.title,
+                            accountType: 'expert',
+                            accountIndex: expertIndex
+                        });
+                    }
+                });
+            }
         });
-    });
+    }
     
-    return groups;
+    // 화력 계정들의 선택된 그룹도 확인 (임시로 비활성화 - 전문가만 전송)
+    console.log('🔍 화력 계정 확인 건너뜀 (전문가 전용 모드)');
+    /*
+    if (typeof appState !== 'undefined' && appState.rooms && appState.rooms.firepower) {
+        console.log('🔍 화력 계정도 확인 중...');
+        Object.keys(appState.rooms.firepower).forEach(key => {
+            const firepowerRoom = appState.rooms.firepower[key][0];
+            if (firepowerRoom && firepowerRoom.selectedGroups) {
+                firepowerRoom.selectedGroups.forEach(group => {
+                    if (group.active === true) {
+                        selectedGroups.push({
+                            phone: firepowerRoom.phone,
+                            groupId: group.id,
+                            groupTitle: group.name || group.title,
+                            accountType: 'firepower',
+                            accountIndex: key
+                        });
+                    }
+                });
+            }
+        });
+    }
+    */
+    
+    console.log('🚀 최종 선택된 그룹:', selectedGroups);
+    return selectedGroups;
 }
 
 // 수익인증 모달 닫기
@@ -4336,7 +5039,7 @@ async function refreshAllAccountGroups() {
                 if (room && room.phone) {
                     console.log(`Refreshing expert groups for ${room.phone}`);
                     await refreshAccountGroups(room.phone, 'expert', i);
-                    await new Promise(resolve => setTimeout(resolve, 600)); // 0.5초 간격
+                    await new Promise(resolve => setTimeout(resolve, getCurrentMessageSpeed())); // 동적 속도 적용
                 }
             }
         }
@@ -4349,7 +5052,7 @@ async function refreshAllAccountGroups() {
             if (room && room.phone) {
                 console.log(`Refreshing firepower ${firepower} groups for ${room.phone}`);
                 await refreshAccountGroups(room.phone, 'firepower', firepower);
-                await new Promise(resolve => setTimeout(resolve, 600)); // 0.5초 간격
+                await new Promise(resolve => setTimeout(resolve, getCurrentMessageSpeed())); // 동적 속도 적용
             }
         }
         
@@ -4404,7 +5107,7 @@ async function autoConnectAccount(phone) {
     }
 }
 
-// 특정 계정의 그룹 목록 새로고침
+// 특정 계정의 그룹 목록 새로고침 (인텔리전트 동기화)
 async function refreshAccountGroups(phone, type, index) {
     try {
         console.log(`🔄 그룹 새로고침 시작: ${phone} (${type} ${index})`);
@@ -4430,7 +5133,7 @@ async function refreshAccountGroups(phone, type, index) {
                     if (connectResult) {
                         // 연결 성공시 다시 그룹 목록 요청
                         console.log(`✅ ${phone} 자동 연결 성공, 그룹 재요청...`);
-                        await new Promise(resolve => setTimeout(resolve, 2000)); // 2초 대기
+                        await new Promise(resolve => setTimeout(resolve, getCurrentMessageSpeed())); // 동적 속도 적용
                         return refreshAccountGroups(phone, type, index); // 재귀 호출
                     } else {
                         console.log(`❌ ${phone} 자동 연결 실패`);
@@ -4448,38 +5151,41 @@ async function refreshAccountGroups(phone, type, index) {
         const data = await response.json();
         
         if (data.success && data.groups) {
-            console.log(`Loaded ${data.groups.length} groups for ${phone}`);
+            console.log(`📊 그룹 동기화 분석: ${phone} - ${data.groups.length}개 그룹 발견`);
             
-            // 기존에 선택된 그룹 ID들 저장
-            let previouslySelectedIds = [];
+            // 대상 룸 찾기
             let targetRoom = null;
-            
             if (type === 'expert') {
                 targetRoom = appState.rooms.expert[index];
             } else if (type === 'firepower') {
                 targetRoom = appState.rooms.firepower[index] && appState.rooms.firepower[index][0];
             }
             
-            if (targetRoom && targetRoom.selectedGroups) {
-                previouslySelectedIds = targetRoom.selectedGroups.map(g => g.id);
+            if (!targetRoom) {
+                console.warn(`Target room not found for ${type} ${index}`);
+                return;
             }
             
-            // 새로운 그룹 목록에서 기존에 선택된 그룹들만 유지
-            const updatedSelectedGroups = data.groups
-                .filter(group => previouslySelectedIds.includes(group.id))
-                .map(group => ({
-                    id: group.id,
-                    title: group.title,
-                    name: group.title,
-                    active: true
-                }));
+            // 인텔리전트 그룹 동기화 실행
+            const syncResult = await intelligentGroupSync(targetRoom, data.groups, phone, type, index);
             
-            // 상태 업데이트
-            if (targetRoom) {
-                targetRoom.selectedGroups = updatedSelectedGroups;
-                targetRoom.availableGroups = data.groups;
-                console.log(`Updated ${type} ${index}: ${updatedSelectedGroups.length} groups remain selected`);
+            // 결과 적용
+            targetRoom.selectedGroups = syncResult.selectedGroups;
+            targetRoom.availableGroups = data.groups;
+            
+            // 변경사항 로깅 및 사용자 알림
+            if (syncResult.removedGroups.length > 0) {
+                console.log(`🗑️ 탈퇴 그룹 자동 제거:`, syncResult.removedGroups.map(g => g.name));
+                showSyncStatusMessage(`${syncResult.removedGroups.length}개 탈퇴 그룹 제거됨`, 'warning');
             }
+            if (syncResult.newGroups.length > 0) {
+                console.log(`🆕 신규 그룹 발견:`, syncResult.newGroups.map(g => g.title));
+                showNewGroupsNotification(syncResult.newGroups, phone, type, index);
+                showSyncStatusMessage(`${syncResult.newGroups.length}개 신규 그룹 발견`, 'info');
+            }
+            
+            console.log(`✅ ${type} ${index} 동기화 완료: ${syncResult.selectedGroups.length}개 그룹 유지`);
+            showSyncStatusMessage(`동기화 완료: ${syncResult.selectedGroups.length}개 그룹 유지`, 'success');
             
         } else {
             console.warn(`Failed to load groups for ${phone}:`, data.error || 'Unknown error');
@@ -4488,6 +5194,245 @@ async function refreshAccountGroups(phone, type, index) {
         console.error(`Error refreshing groups for ${phone}:`, error);
         // 에러가 발생해도 계속 진행
     }
+}
+
+// 인텔리전트 그룹 동기화 로직
+async function intelligentGroupSync(targetRoom, currentGroups, phone, type, index) {
+    const previouslySelected = targetRoom.selectedGroups || [];
+    const previouslySelectedIds = previouslySelected.map(g => g.id);
+    const currentGroupIds = currentGroups.map(g => g.id);
+    
+    // 1. 탈퇴한 그룹 찾기 (기존에 선택되었지만 현재 목록에 없는 그룹)
+    const removedGroups = previouslySelected.filter(g => !currentGroupIds.includes(g.id));
+    
+    // 2. 신규 그룹 찾기 (현재 목록에 있지만 기존에 없던 그룹)
+    const previousAvailableIds = (targetRoom.availableGroups || []).map(g => g.id);
+    const newGroups = currentGroups.filter(g => !previousAvailableIds.includes(g.id));
+    
+    // 3. 유지할 그룹들 (탈퇴하지 않은 기존 선택 그룹)
+    const remainingSelectedGroups = currentGroups
+        .filter(group => previouslySelectedIds.includes(group.id))
+        .map(group => ({
+            id: group.id,
+            title: group.title,
+            name: group.title,
+            active: true
+        }));
+    
+    console.log(`📈 동기화 분석 결과 (${phone}):`);
+    console.log(`   - 유지: ${remainingSelectedGroups.length}개`);
+    console.log(`   - 제거: ${removedGroups.length}개`);
+    console.log(`   - 신규: ${newGroups.length}개`);
+    
+    return {
+        selectedGroups: remainingSelectedGroups,
+        removedGroups: removedGroups,
+        newGroups: newGroups,
+        totalAvailable: currentGroups.length
+    };
+}
+
+// 신규 그룹 알림 시스템
+function showNewGroupsNotification(newGroups, phone, type, index) {
+    if (newGroups.length === 0) return;
+    
+    // 알림 표시 시간 설정 (5초)
+    const NOTIFICATION_DURATION = 5000;
+    
+    // 기존 알림 제거
+    const existingNotification = document.querySelector('.new-groups-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    // 알림 생성
+    const notification = document.createElement('div');
+    notification.className = 'new-groups-notification';
+    notification.innerHTML = `
+        <div class="notification-header">
+            <span class="notification-icon">🆕</span>
+            <span class="notification-title">신규 그룹 발견 (${phone})</span>
+            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+        <div class="notification-content">
+            <p class="notification-message">${newGroups.length}개의 새로운 그룹이 발견되었습니다:</p>
+            <ul class="new-groups-list">
+                ${newGroups.map(group => `
+                    <li class="new-group-item">
+                        <input type="checkbox" id="new-group-${group.id}" data-group-id="${group.id}">
+                        <label for="new-group-${group.id}" class="group-name">${group.title}</label>
+                    </li>
+                `).join('')}
+            </ul>
+            <div class="notification-actions">
+                <button class="btn-add-selected" onclick="addSelectedNewGroups('${phone}', '${type}', '${index}')">선택한 그룹 추가</button>
+                <button class="btn-add-all" onclick="addAllNewGroups('${phone}', '${type}', '${index}')">모든 그룹 추가</button>
+                <button class="btn-ignore" onclick="this.closest('.new-groups-notification').remove()">나중에</button>
+            </div>
+        </div>
+    `;
+    
+    // 스타일 적용
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 350px;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        animation: slideInRight 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // 자동 제거 타이머 (사용자가 상호작용하지 않을 경우)
+    setTimeout(() => {
+        if (document.contains(notification)) {
+            notification.style.animation = 'slideOutRight 0.3s ease-in';
+            setTimeout(() => notification.remove(), 300);
+        }
+    }, NOTIFICATION_DURATION);
+    
+    console.log(`🔔 신규 그룹 알림 표시: ${newGroups.length}개 그룹`);
+}
+
+// 선택한 신규 그룹 추가
+async function addSelectedNewGroups(phone, type, index) {
+    const notification = document.querySelector('.new-groups-notification');
+    const checkedGroups = notification.querySelectorAll('input[type="checkbox"]:checked');
+    
+    if (checkedGroups.length === 0) {
+        alert('추가할 그룹을 선택해주세요.');
+        return;
+    }
+    
+    const selectedGroupIds = Array.from(checkedGroups).map(cb => cb.dataset.groupId);
+    await addNewGroupsToAccount(selectedGroupIds, phone, type, index);
+    
+    notification.remove();
+    console.log(`✅ ${checkedGroups.length}개 신규 그룹 추가 완료`);
+}
+
+// 모든 신규 그룹 추가
+async function addAllNewGroups(phone, type, index) {
+    const notification = document.querySelector('.new-groups-notification');
+    const allGroups = notification.querySelectorAll('input[type="checkbox"]');
+    const allGroupIds = Array.from(allGroups).map(cb => cb.dataset.groupId);
+    
+    await addNewGroupsToAccount(allGroupIds, phone, type, index);
+    
+    notification.remove();
+    console.log(`✅ ${allGroups.length}개 신규 그룹 모두 추가 완료`);
+}
+
+// 신규 그룹을 실제로 계정에 추가
+async function addNewGroupsToAccount(groupIds, phone, type, index) {
+    try {
+        // 대상 룸 찾기
+        let targetRoom = null;
+        if (type === 'expert') {
+            targetRoom = appState.rooms.expert[index];
+        } else if (type === 'firepower') {
+            targetRoom = appState.rooms.firepower[index] && appState.rooms.firepower[index][0];
+        }
+        
+        if (!targetRoom || !targetRoom.availableGroups) {
+            console.error('Target room or available groups not found');
+            return;
+        }
+        
+        // 추가할 그룹 정보 찾기
+        const groupsToAdd = targetRoom.availableGroups.filter(g => groupIds.includes(g.id.toString()));
+        
+        // 기존 선택된 그룹에 추가 (정규화 적용)
+        const newSelectedGroups = normalizeGroupData(groupsToAdd, false);
+        
+        targetRoom.selectedGroups = [...(targetRoom.selectedGroups || []), ...newSelectedGroups];
+        
+        // UI 업데이트
+        if (type === 'expert') {
+            renderExpertRooms();
+        } else if (type === 'firepower') {
+            renderFirepowerRooms(index);
+        }
+        
+        // 로컬스토리지 저장
+        saveToLocalStorage();
+        
+        console.log(`📝 ${groupsToAdd.length}개 그룹이 ${phone}에 추가되었습니다`);
+        
+    } catch (error) {
+        console.error('Error adding new groups:', error);
+        alert('그룹 추가 중 오류가 발생했습니다.');
+    }
+}
+
+// 동기화 상태 메시지 표시 함수
+function showSyncStatusMessage(message, type = 'info') {
+    // 기존 상태 메시지 제거
+    const existingMessage = document.querySelector('.sync-status-message');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+    
+    // 새 상태 메시지 생성
+    const statusMessage = document.createElement('div');
+    statusMessage.className = `sync-status-message sync-${type}`;
+    statusMessage.textContent = message;
+    
+    // 스타일 적용
+    statusMessage.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        padding: 10px 15px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        z-index: 9999;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        animation: slideInRight 0.3s ease-out;
+        max-width: 300px;
+    `;
+    
+    // 타입별 색상 설정
+    switch(type) {
+        case 'success':
+            statusMessage.style.background = '#d4edda';
+            statusMessage.style.color = '#155724';
+            statusMessage.style.border = '1px solid #c3e6cb';
+            break;
+        case 'warning':
+            statusMessage.style.background = '#fff3cd';
+            statusMessage.style.color = '#856404';
+            statusMessage.style.border = '1px solid #ffeaa7';
+            break;
+        case 'info':
+            statusMessage.style.background = '#d1ecf1';
+            statusMessage.style.color = '#0c5460';
+            statusMessage.style.border = '1px solid #bee5eb';
+            break;
+        default:
+            statusMessage.style.background = '#f8f9fa';
+            statusMessage.style.color = '#495057';
+            statusMessage.style.border = '1px solid #dee2e6';
+    }
+    
+    document.body.appendChild(statusMessage);
+    
+    // 3초 후 자동 제거
+    setTimeout(() => {
+        if (document.contains(statusMessage)) {
+            statusMessage.style.animation = 'slideOutRight 0.3s ease-in';
+            setTimeout(() => statusMessage.remove(), 300);
+        }
+    }, 3000);
+    
+    console.log(`[동기화 알림] ${message}`);
 }
 
 // 사용자 API 등록 관련 함수들
@@ -4973,7 +5918,7 @@ function resetAndRebuildAccounts() {
     // 결과 확인
     setTimeout(() => {
         showAccountDebugInfo();
-    }, 500);
+    }, 800);
 }
 
 // 마스터 계정 목록 무결성 검증
@@ -5564,12 +6509,7 @@ function placeAccountInCorrectSection(accountInfo) {
         const expertRoom = {
             phone: accountInfo.phone,
             user: accountInfo.user,
-            selectedGroups: accountInfo.groups ? accountInfo.groups.map(group => ({
-                id: group.id,
-                name: group.title,
-                title: group.title,
-                active: true
-            })) : [],
+            selectedGroups: accountInfo.groups ? normalizeGroupData(accountInfo.groups, false) : [],
             availableGroups: accountInfo.groups || [],
             active: true,
             enabled: true
@@ -5672,12 +6612,188 @@ document.addEventListener('visibilitychange', () => {
         console.log('📱 페이지 숨김 - 데이터 저장');
         saveToLocalStorage();
     } else {
-        console.log('📱 페이지 보임 - 데이터 확인');
-        // 페이지가 다시 보일 때 서버와 동기화
-        setTimeout(() => {
-            debugLoggedAccounts();
-        }, 500);
+        console.log('📱 페이지 보임 - 자동 동기화 비활성화됨');
+        // 페이지가 다시 보일 때 서버와 자동 동기화 (비활성화)
+        // setTimeout(() => {
+        //     syncWithServer();
+        // }, 500);
     }
+});
+
+// 🔄 실시간 동기화 시스템
+let syncInterval = null;
+let lastSyncTime = null;
+
+// 서버와 동기화하는 통합 함수
+async function syncWithServer() {
+    try {
+        console.log('🔄 서버 동기화 시작...');
+        const syncedAccounts = await loadAccountsFromServer();
+        
+        if (syncedAccounts && syncedAccounts.length > 0) {
+            lastSyncTime = new Date();
+            console.log(`✅ 동기화 완료: ${syncedAccounts.length}개 계정, 시간: ${lastSyncTime.toLocaleTimeString()}`);
+            
+            // 동기화 상태 UI 업데이트
+            updateSyncStatus('success', `마지막 동기화: ${lastSyncTime.toLocaleTimeString()}`);
+        } else {
+            console.log('📭 동기화할 계정이 없습니다.');
+            updateSyncStatus('warning', '동기화할 계정 없음');
+        }
+    } catch (error) {
+        console.error('❌ 동기화 실패:', error);
+        updateSyncStatus('error', '동기화 실패');
+    }
+}
+
+// 동기화 상태 UI 업데이트
+function updateSyncStatus(status, message) {
+    // 기존 상태 표시 요소가 있으면 업데이트
+    let statusElement = document.getElementById('syncStatus');
+    if (!statusElement) {
+        // 상태 표시 요소 생성
+        const headerElement = document.querySelector('header .api-status');
+        if (headerElement) {
+            statusElement = document.createElement('span');
+            statusElement.id = 'syncStatus';
+            statusElement.style.marginLeft = '20px';
+            headerElement.appendChild(statusElement);
+        }
+    }
+    
+    if (statusElement) {
+        statusElement.className = `sync-status ${status}`;
+        statusElement.textContent = message;
+    }
+}
+
+// 성공 메시지 표시
+function showSuccessMessage(message) {
+    console.log(`✅ ${message}`);
+    // 간단한 알림 표시 (기존 알림 시스템이 있다면 재사용)
+    if (typeof alert !== 'undefined') {
+        // alert 대신 더 나은 알림 시스템이 있다면 교체 가능
+        setTimeout(() => {
+            alert(`✅ ${message}`);
+        }, 100);
+    }
+}
+
+// 오류 메시지 표시
+function showErrorMessage(message) {
+    console.error(`❌ ${message}`);
+    // 간단한 알림 표시 (기존 알림 시스템이 있다면 재사용)
+    if (typeof alert !== 'undefined') {
+        setTimeout(() => {
+            alert(`❌ ${message}`);
+        }, 100);
+    }
+}
+
+// 자동 동기화 시작
+function startAutoSync() {
+    // 기존 인터벌 정리
+    if (syncInterval) {
+        clearInterval(syncInterval);
+    }
+    
+    // 설정에 따른 자동 동기화 (비활성화됨)
+    if (false) { // appState.autoSync.enabled 비활성화
+        syncInterval = setInterval(() => {
+            console.log('⏰ 자동 동기화 실행...');
+            syncWithServer();
+        }, 60000); // appState.autoSync.interval
+        console.log(`🔄 자동 동기화 시작됨`);
+    } else {
+        console.log('🚫 자동 동기화 비활성화됨 (수동 새로고침만 가능)');
+    }
+}
+
+// 자동 동기화 중지
+function stopAutoSync() {
+    if (syncInterval) {
+        clearInterval(syncInterval);
+        syncInterval = null;
+        console.log('⏹️ 자동 동기화 중지됨');
+    }
+}
+
+// 자동 동기화 토글
+function toggleAutoSync() {
+    appState.autoSync.enabled = !appState.autoSync.enabled;
+    
+    if (appState.autoSync.enabled) {
+        startAutoSync();
+        console.log('✅ 자동 동기화 활성화됨');
+    } else {
+        stopAutoSync();
+        console.log('❌ 자동 동기화 비활성화됨');
+    }
+    
+    saveToLocalStorage();
+    return appState.autoSync.enabled;
+}
+
+// 새로고침 버튼 이벤트 핸들러 업그레이드
+function setupSyncEventListeners() {
+    // 새로고침 버튼 찾기
+    const refreshBtn = document.getElementById('refreshAllGroupsBtn');
+    if (refreshBtn) {
+        // 기존 이벤트 리스너 제거 후 새로운 동기화 기능 추가
+        refreshBtn.onclick = async function() {
+            this.disabled = true;
+            this.textContent = '🔄 동기화 중...';
+            
+            try {
+                console.log('🔄 수동 새로고침 버튼 - 서버 동기화 비활성화됨');
+                // await syncWithServer(); // 비활성화
+                this.textContent = '🔄';
+                setTimeout(() => {
+                    this.disabled = false;
+                }, 1000); // 1초 후 버튼 활성화
+            } catch (error) {
+                this.textContent = '❌';
+                setTimeout(() => {
+                    this.textContent = '🔄';
+                    this.disabled = false;
+                }, 2000); // 2초 후 복구
+            }
+        };
+        
+        console.log('✅ 새로고침 버튼에 동기화 기능 연결됨');
+    }
+    
+    // 키보드 단축키 지원 (Ctrl+R 또는 F5) - 일반 새로고침 허용
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey && e.key === 'r') || e.key === 'F5') {
+            // e.preventDefault(); // 기본 새로고침 허용
+            console.log('🔄 키보드 단축키 새로고침 - 일반 새로고침 허용');
+            // syncWithServer(); // 비활성화
+        }
+    });
+}
+
+// 동기화 시스템 초기화 (init 함수 실행 후)
+function initializeSyncSystem() {
+    // 이벤트 리스너 설정
+    setupSyncEventListeners();
+    
+    // 자동 동기화 시작
+    startAutoSync();
+    
+    console.log('🔄 동기화 시스템 초기화 완료');
+}
+
+// init 함수 실행 후 동기화 활성화
+setTimeout(() => {
+    initializeSyncSystem();
+}, 3000); // 3초 후 실행 (init 완료 대기)
+
+// 페이지 언로드 시 정리
+window.addEventListener('beforeunload', () => {
+    console.log('💾 페이지 종료 - 동기화 정리');
+    stopAutoSync();
+    saveToLocalStorage();
 });
 
 // ============== API 관리 기능 ==============

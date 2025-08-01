@@ -1,0 +1,524 @@
+[
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "check_sms_type.py",
+    "line_number": 27,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.479832"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "code_monitor.py",
+    "line_number": 141,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.488832"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "complete_sms_test.py",
+    "line_number": 59,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.493832"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "complete_sms_test.py",
+    "line_number": 76,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.493832"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "debug_sms.py",
+    "line_number": 35,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.496834"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "debug_sms.py",
+    "line_number": 38,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.496834"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "fix_10th_account.py",
+    "line_number": 35,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.499834"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "fix_10th_account.py",
+    "line_number": 60,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.499834"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "force_sms_test.py",
+    "line_number": 16,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.501834"
+  },
+  {
+    "type": "security",
+    "severity": "high",
+    "file_path": "force_sms_test.py",
+    "line_number": 10,
+    "message": "API 키/해시 하드코딩 감지",
+    "suggestion": "API 키는 환경변수나 별도 설정 파일로 관리하세요",
+    "timestamp": "2025-07-27T16:45:44.501834"
+  },
+  {
+    "type": "security",
+    "severity": "high",
+    "file_path": "force_sms_test.py",
+    "line_number": 11,
+    "message": "API 키/해시 하드코딩 감지",
+    "suggestion": "API 키는 환경변수나 별도 설정 파일로 관리하세요",
+    "timestamp": "2025-07-27T16:45:44.501834"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "real_sms_verification.py",
+    "line_number": 28,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.503833"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "real_test.py",
+    "line_number": 50,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.506837"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "real_test.py",
+    "line_number": 52,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.506837"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "sms_reality_check.py",
+    "line_number": 33,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.509835"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "test_monitor.py",
+    "line_number": 63,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.511833"
+  },
+  {
+    "type": "function_call",
+    "severity": "low",
+    "file_path": "test_monitor.py",
+    "line_number": 67,
+    "message": "예외 처리에서 로깅 누락",
+    "suggestion": "예외 발생 시 적절한 로깅을 추가하세요",
+    "timestamp": "2025-07-27T16:45:44.511833"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "test_monitor.py",
+    "line_number": 92,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.511833"
+  },
+  {
+    "type": "security",
+    "severity": "high",
+    "file_path": "test_monitor.py",
+    "line_number": 41,
+    "message": "API 키/해시 하드코딩 감지",
+    "suggestion": "API 키는 환경변수나 별도 설정 파일로 관리하세요",
+    "timestamp": "2025-07-27T16:45:44.511833"
+  },
+  {
+    "type": "security",
+    "severity": "high",
+    "file_path": "test_monitor.py",
+    "line_number": 88,
+    "message": "API 키/해시 하드코딩 감지",
+    "suggestion": "API 키는 환경변수나 별도 설정 파일로 관리하세요",
+    "timestamp": "2025-07-27T16:45:44.511833"
+  },
+  {
+    "type": "security",
+    "severity": "high",
+    "file_path": "test_monitor.py",
+    "line_number": 42,
+    "message": "API 키/해시 하드코딩 감지",
+    "suggestion": "API 키는 환경변수나 별도 설정 파일로 관리하세요",
+    "timestamp": "2025-07-27T16:45:44.511833"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 332,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.524832"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 343,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.524832"
+  },
+  {
+    "type": "function_call",
+    "severity": "low",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 465,
+    "message": "예외 처리에서 로깅 누락",
+    "suggestion": "예외 발생 시 적절한 로깅을 추가하세요",
+    "timestamp": "2025-07-27T16:45:44.524832"
+  },
+  {
+    "type": "function_call",
+    "severity": "low",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 517,
+    "message": "예외 처리에서 로깅 누락",
+    "suggestion": "예외 발생 시 적절한 로깅을 추가하세요",
+    "timestamp": "2025-07-27T16:45:44.524832"
+  },
+  {
+    "type": "function_call",
+    "severity": "low",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 562,
+    "message": "예외 처리에서 로깅 누락",
+    "suggestion": "예외 발생 시 적절한 로깅을 추가하세요",
+    "timestamp": "2025-07-27T16:45:44.524832"
+  },
+  {
+    "type": "function_call",
+    "severity": "low",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 623,
+    "message": "예외 처리에서 로깅 누락",
+    "suggestion": "예외 발생 시 적절한 로깅을 추가하세요",
+    "timestamp": "2025-07-27T16:45:44.524832"
+  },
+  {
+    "type": "function_call",
+    "severity": "low",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 635,
+    "message": "예외 처리에서 로깅 누락",
+    "suggestion": "예외 발생 시 적절한 로깅을 추가하세요",
+    "timestamp": "2025-07-27T16:45:44.524832"
+  },
+  {
+    "type": "function_call",
+    "severity": "low",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 702,
+    "message": "예외 처리에서 로깅 누락",
+    "suggestion": "예외 발생 시 적절한 로깅을 추가하세요",
+    "timestamp": "2025-07-27T16:45:44.524832"
+  },
+  {
+    "type": "function_call",
+    "severity": "low",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 754,
+    "message": "예외 처리에서 로깅 누락",
+    "suggestion": "예외 발생 시 적절한 로깅을 추가하세요",
+    "timestamp": "2025-07-27T16:45:44.524832"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 855,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.524832"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 858,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.524832"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 920,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.524832"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 935,
+    "message": "TelegramClient 비동기 처리 누락 가능성",
+    "suggestion": "TelegramClient 메서드들은 await와 함께 사용해야 합니다",
+    "timestamp": "2025-07-27T16:45:44.524832"
+  },
+  {
+    "type": "security",
+    "severity": "high",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 908,
+    "message": "API 키/해시 하드코딩 감지",
+    "suggestion": "API 키는 환경변수나 별도 설정 파일로 관리하세요",
+    "timestamp": "2025-07-27T16:45:44.524832"
+  },
+  {
+    "type": "security",
+    "severity": "high",
+    "file_path": "server\\proxy_server.py",
+    "line_number": 909,
+    "message": "API 키/해시 하드코딩 감지",
+    "suggestion": "API 키는 환경변수나 별도 설정 파일로 관리하세요",
+    "timestamp": "2025-07-27T16:45:44.525832"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 635,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 671,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 895,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 1068,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 1098,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 1300,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 1342,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 1550,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 1599,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 1637,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 1663,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 1764,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 2019,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 2080,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 2243,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 2326,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 2636,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 2676,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 2851,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 3130,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 3353,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  },
+  {
+    "type": "function_call",
+    "severity": "medium",
+    "file_path": "app.js",
+    "line_number": 3387,
+    "message": "fetch 호출에 에러 처리 누락",
+    "suggestion": "fetch 호출에는 .catch() 또는 try-catch를 사용하세요",
+    "timestamp": "2025-07-27T16:45:44.533838"
+  }
+]

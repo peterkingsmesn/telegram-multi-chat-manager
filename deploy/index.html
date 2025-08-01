@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>텔레그램 멀티 챗 매니저</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>텔레그램 멀티 챗 매니저</h1>
+            <div class="api-status">
+                <span class="api-count">활성 API: <span id="activeApiCount">0</span>/30</span>
+                <span class="proxy-status" id="proxyStatus" style="margin-left: 20px; display: none;">
+                    프록시: <span id="proxyInfo">-</span>
+                </span>
+            </div>
+        </header>
+
+        <div class="main-container">
+            <!-- 왼쪽 컨테이너 -->
+            <div class="left-container">
+                <!-- 수익인증 섹션 -->
+                <section class="clipboard-section">
+                    <h2>수익인증</h2>
+                    <div class="clipboard-buttons">
+                        <button class="clipboard-btn" data-capacity="10">
+                            <span class="btn-number">1</span>
+                            <span class="btn-capacity">10</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="20">
+                            <span class="btn-number">2</span>
+                            <span class="btn-capacity">20</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="30">
+                            <span class="btn-number">3</span>
+                            <span class="btn-capacity">30</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="50">
+                            <span class="btn-number">4</span>
+                            <span class="btn-capacity">50</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="70">
+                            <span class="btn-number">5</span>
+                            <span class="btn-capacity">70</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="100">
+                            <span class="btn-number">6</span>
+                            <span class="btn-capacity">100</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="150">
+                            <span class="btn-number">7</span>
+                            <span class="btn-capacity">150</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="200">
+                            <span class="btn-number">8</span>
+                            <span class="btn-capacity">200</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="250">
+                            <span class="btn-number">9</span>
+                            <span class="btn-capacity">250</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="300">
+                            <span class="btn-number">10</span>
+                            <span class="btn-capacity">300</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="400">
+                            <span class="btn-number">11</span>
+                            <span class="btn-capacity">400</span>
+                        </button>
+                        <button class="clipboard-btn" data-capacity="500">
+                            <span class="btn-number">12</span>
+                            <span class="btn-capacity">500</span>
+                        </button>
+                    </div>
+                </section>
+                
+                <!-- 메시지 템플릿 섹션 -->
+                <section class="message-templates">
+                    <div class="template-header">
+                        <h2>메시지 템플릿</h2>
+                        <button class="btn-speed-settings" id="speedSettingsBtn">⚡ 전송 속도 설정</button>
+                    </div>
+                    <div class="template-list" id="templateList">
+                        <!-- 10개의 템플릿 입력칸이 생성됨 -->
+                    </div>
+                </section>
+                
+                <!-- 등록된 화력 리스트 섹션 -->
+                <section class="firepower-list-section">
+                    <div class="firepower-list-header">
+                        <h2>등록된 화력 목록</h2>
+                        <button class="btn-refresh-all-groups" id="refreshAllGroupsBtn" title="모든 계정의 그룹 목록 새로고침">🔄</button>
+                    </div>
+                    <div class="firepower-accounts" id="firepowerAccountsList">
+                        <!-- 등록된 화력 계정들이 표시됨 -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- 오른쪽 컨테이너 -->
+            <div class="right-container">
+                <!-- 전문가 섹션 -->
+                <section class="expert-section">
+                    <h2>전문가 섹션</h2>
+                <div class="expert-controls">
+                    <button class="btn-add-expert-api" id="addExpertApiBtn" onclick="window.open('api_register.html', '_blank')">📱 API 등록</button>
+                    <button class="btn-user-register-api" id="showRegisterModalBtn">사용자 API 등록</button>
+                    <button class="btn-api-manager" id="showApiManagerBtn">🔧 API 관리</button>
+                    <button class="btn-cleanup-duplicates" id="cleanupDuplicatesBtn">중복 정리</button>
+                    <button class="btn-debug-accounts" id="debugAccountsBtn">🔍 계정 디버그</button>
+                    <button class="btn-reset-accounts" id="resetAccountsBtn">🔄 계정 재구성</button>
+                    <button class="btn-reconnect-accounts" id="reconnectAccountsBtn">중요 계정 재연결</button>
+                    <button class="btn-reset-image-session" id="resetImageSessionBtn">🎲 이미지 세션 초기화</button>
+                    <button class="btn-broadcast" id="broadcastBtn">전체 전송</button>
+                </div>
+                <div class="chat-rooms" id="expertRooms">
+                    <!-- 등록된 API별 그룹 카드가 동적으로 생성됨 -->
+                </div>
+                
+                <!-- 메시지 전송 영역 -->
+                <div class="message-compose">
+                    <div class="input-toolbar">
+                        <button class="emoji-btn" title="이모지">😊</button>
+                        <label for="attachFile" class="attach-btn" title="파일 첨부">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                            </svg>
+                        </label>
+                        <input type="file" id="attachFile" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" style="display: none;">
+                    </div>
+                    <div class="message-input-wrapper">
+                        <div class="attached-files" id="attachedFiles">
+                            <!-- 첨부된 파일 미리보기 -->
+                        </div>
+                        <textarea 
+                            id="messageTextarea" 
+                            placeholder="메시지를 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈, Ctrl+V: 이미지 붙여넣기)" 
+                            rows="4"
+                        ></textarea>
+                    </div>
+                    <div class="send-controls">
+                        <div class="selected-groups">
+                            <span>선택된 그룹: <span id="selectedGroupCount">0</span>개</span>
+                        </div>
+                        <button class="btn-send-message" id="sendMessageBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                            </svg>
+                            전송
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 화력별 섹션 -->
+            <section class="firepower-section">
+                <h2>화력별 그룹방</h2>
+                <div class="firepower-controls" style="text-align: center; margin-bottom: 15px;">
+                    <button class="btn-auto-setup" id="autoSetupBtn" style="background-color: #ff6b35; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">📋 모든 화력 자동 배치</button>
+                </div>
+                <div class="firepower-tabs">
+                    <div class="firepower-grid">
+                        <button class="tab-btn active" data-firepower="1">1</button>
+                        <button class="tab-btn" data-firepower="2">2</button>
+                        <button class="tab-btn" data-firepower="3">3</button>
+                        <button class="tab-btn" data-firepower="4">4</button>
+                        <button class="tab-btn" data-firepower="5">5</button>
+                        <button class="tab-btn" data-firepower="6">6</button>
+                        <button class="tab-btn" data-firepower="7">7</button>
+                        <button class="tab-btn" data-firepower="8">8</button>
+                        <button class="tab-btn" data-firepower="9">9</button>
+                        <button class="tab-btn" data-firepower="10">10</button>
+                        <button class="tab-btn" data-firepower="11">11</button>
+                        <button class="tab-btn" data-firepower="12">12</button>
+                        <button class="tab-btn" data-firepower="13">13</button>
+                        <button class="tab-btn" data-firepower="14">14</button>
+                        <button class="tab-btn" data-firepower="15">15</button>
+                        <button class="tab-btn" data-firepower="16">16</button>
+                        <button class="tab-btn" data-firepower="17">17</button>
+                        <button class="tab-btn" data-firepower="18">18</button>
+                        <button class="tab-btn" data-firepower="19">19</button>
+                        <button class="tab-btn" data-firepower="20">20</button>
+                        <button class="tab-btn" data-firepower="21">21</button>
+                        <button class="tab-btn" data-firepower="22">22</button>
+                        <button class="tab-btn" data-firepower="23">23</button>
+                        <button class="tab-btn" data-firepower="24">24</button>
+                        <button class="tab-btn" data-firepower="25">25</button>
+                        <button class="tab-btn" data-firepower="26">26</button>
+                        <button class="tab-btn" data-firepower="27">27</button>
+                        <button class="tab-btn" data-firepower="28">28</button>
+                        <button class="tab-btn" data-firepower="29">29</button>
+                        <button class="tab-btn" data-firepower="30">30</button>
+                    </div>
+                </div>
+                
+                <div class="firepower-content">
+                    <div class="firepower-main">
+                        <h3>화력 <span id="currentFirepower">1</span></h3>
+                        <div class="firepower-controls">
+                            <button class="btn-add-firepower-api" id="addFirepowerApiBtn">API 등록하기</button>
+                        </div>
+                        <div class="firepower-api-info" id="firepowerApiInfo" style="display: none;">
+                            <p>연결된 계정: <span id="firepowerAccountName">-</span></p>
+                            <p>선택된 그룹: <span id="firepowerGroupCount">0</span>개</p>
+                            <div class="firepower-buttons">
+                                <button class="btn-refresh-groups" id="refreshGroupsBtn">그룹 새로고침</button>
+                                <button class="btn-change-api" id="changeApiBtn">API 변경</button>
+                                <button class="btn-delete-api" id="deleteApiBtn">API 삭제</button>
+                            </div>
+                        </div>
+                        <div class="firepower-groups" id="firepowerGroups">
+                            <!-- 선택된 그룹 목록 표시 -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            </div>
+        </div>
+
+
+        <!-- 이모지 선택기 -->
+        <div class="emoji-picker" id="emojiPicker">
+            <div class="emoji-categories">
+                <button class="emoji-category active" data-category="smileys">😊</button>
+                <button class="emoji-category" data-category="animals">🐶</button>
+                <button class="emoji-category" data-category="food">🍕</button>
+                <button class="emoji-category" data-category="activities">⚽</button>
+                <button class="emoji-category" data-category="objects">💡</button>
+                <button class="emoji-category" data-category="symbols">❤️</button>
+            </div>
+            <div class="emoji-grid" id="emojiGrid">
+                <!-- 이모지들이 동적으로 로드됨 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- API 추가 모달 -->
+    <div class="modal" id="apiModal">
+        <div class="modal-content">
+            <h3>API 키 추가</h3>
+            <input type="text" id="apiKeyInput" placeholder="API 키를 입력하세요">
+            <input type="text" id="apiBotNameInput" placeholder="봇 이름을 입력하세요">
+            <div class="modal-actions">
+                <button id="saveApiBtn">저장</button>
+                <button id="cancelApiBtn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- API 등록 모달 -->
+    <div class="modal" id="apiRegisterModal">
+        <div class="modal-content">
+            <h3>새 텔레그램 API 등록</h3>
+            <p class="api-guide">텔레그램 API 정보를 입력하여 계정을 등록하세요</p>
+            
+            <input type="tel" id="registerPhoneInput" placeholder="전화번호 (예: +1234567890, +33612345678)">
+            <input type="number" id="registerApiIdInput" placeholder="API ID (숫자)">
+            <input type="text" id="registerApiHashInput" placeholder="API Hash (32자리)" maxlength="32">
+            
+            <div class="modal-buttons">
+                <button id="registerApiBtn" class="btn-register">API 등록</button>
+                <button id="cancelRegisterBtn" class="btn-cancel">취소</button>
+            </div>
+            
+            <div id="registerStatus" class="connection-status"></div>
+            
+            <div class="api-help">
+                <h4>API 정보 받는 방법:</h4>
+                <ol>
+                    <li>my.telegram.org 접속</li>
+                    <li>전화번호로 로그인</li>
+                    <li>API development tools 클릭</li>
+                    <li>새 앱 만들기</li>
+                    <li>API ID와 API Hash 복사</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- 전문가 API 추가 모달 -->
+    <div class="modal" id="expertApiModal">
+        <div class="modal-content">
+            <h3>텔레그램 User API 연결</h3>
+            <input type="tel" id="expertPhoneInput" placeholder="전화번호 (예: +1234567890, +33612345678)">
+            <button id="connectApiBtn" class="btn-connect-api">연결하기</button>
+            <button id="expertAppAuthBtn" class="btn-app-auth">앱으로 인증</button>
+            
+            <div id="verificationSection" style="display: none;">
+                <h4>인증 코드 입력</h4>
+                <input type="text" id="verificationCode" placeholder="텔레그램으로 받은 인증 코드">
+                <button id="verifyCodeBtn">확인</button>
+            </div>
+            
+            <div id="connectionStatus" class="connection-status"></div>
+            
+            <button id="testConnectionBtn" style="display: none;">연결 테스트</button>
+            <button id="loadGroupsBtn" style="display: none;">그룹 목록 불러오기</button>
+            
+            <div class="group-selection" style="display: none;">
+                <h4>그룹 선택</h4>
+                <div class="available-groups" id="availableGroups">
+                    <!-- API로 불러온 그룹 목록이 표시됨 -->
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="saveExpertApiBtn">저장</button>
+                <button id="cancelExpertApiBtn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 전체 전송 모달 -->
+    <div class="modal" id="broadcastModal">
+        <div class="modal-content">
+            <h3>전체 전송</h3>
+            <div class="broadcast-options">
+                <label>
+                    <input type="checkbox" id="selectAllGroups" checked> 모든 그룹 선택
+                </label>
+                <div class="group-list" id="groupList">
+                    <!-- 그룹 체크박스 목록이 동적으로 생성됨 -->
+                </div>
+            </div>
+            <textarea id="broadcastMessage" placeholder="전송할 메시지를 입력하세요..." rows="5"></textarea>
+            <div class="file-upload">
+                <input type="file" id="broadcastFile" accept="image/*">
+                <label for="broadcastFile">사진 첨부</label>
+            </div>
+            <div class="modal-actions">
+                <button id="sendBroadcastBtn">전송</button>
+                <button id="cancelBroadcastBtn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 수익인증 모달 -->
+    <div class="modal" id="profitModal">
+        <div class="modal-content">
+            <h3>수익인증 <span id="profitBtnNumber">1</span> (용량: <span id="profitCapacity">10</span>)</h3>
+            
+            <div class="profit-upload-section">
+                <h4>이미지 업로드</h4>
+                <div class="file-upload-area" id="profitFileUploadArea">
+                    <input type="file" id="profitImageInput" accept="image/*" multiple>
+                    <label for="profitImageInput" class="upload-label">
+                        <div class="upload-icon">📷</div>
+                        <div class="upload-text">이미지를 선택하거나 드래그하세요</div>
+                        <div class="upload-hint">PNG, JPG, GIF 파일 지원 (최대 10개)</div>
+                    </label>
+                </div>
+                
+                <div class="image-preview" id="profitImagePreview">
+                    <!-- 선택된 이미지 미리보기 -->
+                </div>
+            </div>
+            
+            <div class="profit-message-section">
+                <h4>메시지 (선택사항)</h4>
+                <textarea id="profitMessage" placeholder="수익인증과 함께 보낼 메시지를 입력하세요..." rows="3"></textarea>
+            </div>
+            
+            <div class="profit-target-section">
+                <h4>전송 대상</h4>
+                <div class="target-selection">
+                    <label>
+                        <input type="radio" name="profitTarget" value="all" checked>
+                        모든 활성 계정의 모든 그룹
+                    </label>
+                    <label>
+                        <input type="radio" name="profitTarget" value="expert">
+                        전문가만
+                    </label>
+                    <label>
+                        <input type="radio" name="profitTarget" value="firepower">
+                        화력만
+                    </label>
+                    <label>
+                        <input type="radio" name="profitTarget" value="select">
+                        선택된 그룹만
+                    </label>
+                </div>
+                
+                <div class="selected-groups-display" id="profitSelectedGroups" style="display: none;">
+                    <!-- 선택된 그룹 목록이 표시됨 -->
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="sendProfitBtn" class="btn-send-profit">📤 수익인증 전송</button>
+                <button id="cancelProfitBtn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- API 관리 모달 -->
+    <div class="modal" id="apiManagerModal">
+        <div class="modal-content api-manager-modal">
+            <h3>🔧 API 관리</h3>
+            
+            <div class="api-manager-tabs">
+                <button class="tab-btn active" data-tab="expert">전문가 API</button>
+                <button class="tab-btn" data-tab="firepower">화력 API</button>
+            </div>
+            
+            <!-- 전문가 API 관리 -->
+            <div class="api-tab-content active" id="expertApiTab">
+                <div class="api-section-header">
+                    <h4>전문가 섹션 API 목록</h4>
+                    <button class="btn-add-api" id="addExpertApiConfig">+ 새 API 추가</button>
+                </div>
+                <div class="api-list" id="expertApiList">
+                    <!-- 전문가 API 목록이 동적으로 생성됨 -->
+                </div>
+            </div>
+            
+            <!-- 화력 API 관리 -->
+            <div class="api-tab-content" id="firepowerApiTab">
+                <div class="api-section-header">
+                    <h4>화력 섹션 API 목록</h4>
+                    <button class="btn-add-api" id="addFirepowerApiConfig">+ 새 API 추가</button>
+                </div>
+                <div class="api-list" id="firepowerApiList">
+                    <!-- 화력 API 목록이 동적으로 생성됨 -->
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="saveApiConfigBtn" class="btn-save">저장</button>
+                <button id="cancelApiManagerBtn" class="btn-cancel">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- API 추가/수정 모달 -->
+    <div class="modal" id="apiEditModal">
+        <div class="modal-content">
+            <h3 id="apiEditTitle">API 추가</h3>
+            
+            <div class="form-group">
+                <label for="apiEditPhone">전화번호</label>
+                <input type="tel" id="apiEditPhone" placeholder="예: +1234567890, +33612345678">
+            </div>
+            
+            <div class="form-group">
+                <label for="apiEditId">API ID</label>
+                <input type="number" id="apiEditId" placeholder="12345678">
+            </div>
+            
+            <div class="form-group">
+                <label for="apiEditHash">API Hash</label>
+                <input type="text" id="apiEditHash" placeholder="32자리 해시">
+            </div>
+            
+            <div class="form-group">
+                <label for="apiEditType">배치 타입</label>
+                <select id="apiEditType">
+                    <option value="firepower">화력 (기본)</option>
+                    <option value="expert">전문가</option>
+                </select>
+            </div>
+            
+            <div class="form-group" id="firepowerNumberGroup" style="display: none;">
+                <label for="apiEditFirepowerNumber">화력 번호</label>
+                <input type="number" id="apiEditFirepowerNumber" min="1" max="30" placeholder="1-30">
+            </div>
+            
+            <div class="modal-actions">
+                <button id="saveApiEditBtn" class="btn-save">저장</button>
+                <button id="cancelApiEditBtn" class="btn-cancel">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 메시지 전송 속도 설정 모달 -->
+    <div class="modal" id="speedSettingsModal">
+        <div class="modal-content speed-settings-modal">
+            <h3>⚡ 메시지 전송 속도 설정</h3>
+            
+            <div class="speed-settings-container">
+                <div class="current-speed-display">
+                    <label>현재 설정된 속도:</label>
+                    <span id="currentSpeedDisplay">0.8초</span>
+                </div>
+                
+                <div class="speed-presets">
+                    <h4>빠른 설정</h4>
+                    <div class="speed-preset-buttons">
+                        <button class="speed-preset-btn" data-speed="500">⚡ 빠름 (0.5초)</button>
+                        <button class="speed-preset-btn" data-speed="800">🚀 보통 (0.8초)</button>
+                        <button class="speed-preset-btn active" data-speed="1000">🐌 안전 (1.0초)</button>
+                        <button class="speed-preset-btn" data-speed="1500">🛡️ 매우 안전 (1.5초)</button>
+                        <button class="speed-preset-btn" data-speed="2000">🔒 초안전 (2.0초)</button>
+                    </div>
+                </div>
+                
+                <div class="custom-speed-setting">
+                    <h4>사용자 정의 속도</h4>
+                    <div class="custom-speed-input">
+                        <label for="customSpeedInput">전송 간격 (밀리초):</label>
+                        <input type="number" id="customSpeedInput" min="100" max="5000" step="100" value="800">
+                        <span class="speed-unit">ms</span>
+                    </div>
+                    <div class="speed-preview">
+                        <span id="speedPreview">= 0.8초</span>
+                    </div>
+                </div>
+                
+                <div class="speed-warning">
+                    <p><strong>⚠️ 주의사항:</strong></p>
+                    <ul>
+                        <li>너무 빠른 속도(0.3초 미만)는 계정 제재 위험이 있습니다</li>
+                        <li>안전한 속도는 0.8초 이상을 권장합니다</li>
+                        <li>화력 메시지는 별도로 1초로 고정되어 있습니다</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="applySpeedBtn" class="btn-apply">✅ 적용</button>
+                <button id="cancelSpeedBtn" class="btn-cancel">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    
+    <!-- 인텔리전트 동기화 시스템 CSS -->
+    <style>
+        /* 메시지 템플릿 헤더 스타일 */
+        .template-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .btn-speed-settings {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .btn-speed-settings:hover {
+            background: linear-gradient(135deg, #e55a2e, #e8841b);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        /* 속도 설정 모달 스타일 */
+        .speed-settings-modal {
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .speed-settings-container {
+            padding: 20px 0;
+        }
+        
+        .current-speed-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .current-speed-display label {
+            display: block;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        
+        .current-speed-display span {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .speed-presets {
+            margin-bottom: 25px;
+        }
+        
+        .speed-presets h4 {
+            margin-bottom: 15px;
+            color: #495057;
+            font-size: 16px;
+        }
+        
+        .speed-preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+        }
+        
+        .speed-preset-btn {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            padding: 12px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            text-align: center;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .speed-preset-btn:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        .speed-preset-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
+        .custom-speed-setting {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .custom-speed-setting h4 {
+            margin-bottom: 15px;
+            color: #495057;
+        }
+        
+        .custom-speed-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .custom-speed-input label {
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        .custom-speed-input input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .speed-unit {
+            font-weight: 500;
+            color: #6c757d;
+        }
+        
+        .speed-preview {
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .speed-preview span {
+            font-size: 18px;
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .speed-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+        }
+        
+        .speed-warning p {
+            margin: 0 0 10px 0;
+            font-weight: 600;
+            color: #856404;
+        }
+        
+        .speed-warning ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #856404;
+        }
+        
+        .speed-warning li {
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .btn-apply {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .btn-apply:hover {
+            background: #218838;
+        }
+        
+        /* 신규 그룹 알림 애니메이션 */
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        /* 신규 그룹 알림 스타일 */
+        .new-groups-notification {
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .notification-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            border-radius: 7px 7px 0 0;
+        }
+        
+        .notification-icon {
+            font-size: 18px;
+            margin-right: 8px;
+        }
+        
+        .notification-title {
+            flex: 1;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .notification-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .notification-close:hover {
+            color: #000;
+        }
+        
+        .notification-content {
+            padding: 16px;
+        }
+        
+        .notification-message {
+            margin: 0 0 12px 0;
+            color: #555;
+        }
+        
+        .new-groups-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 16px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .new-group-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .new-group-item:last-child {
+            border-bottom: none;
+        }
+        
+        .new-group-item input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
+        .group-name {
+            flex: 1;
+            cursor: pointer;
+            color: #333;
+        }
+        
+        .notification-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .notification-actions button {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .btn-add-selected {
+            background: #007bff !important;
+            color: white !important;
+            border-color: #007bff !important;
+        }
+        
+        .btn-add-selected:hover {
+            background: #0056b3 !important;
+        }
+        
+        .btn-add-all {
+            background: #28a745 !important;
+            color: white !important;
+            border-color: #28a745 !important;
+        }
+        
+        .btn-add-all:hover {
+            background: #1e7e34 !important;
+        }
+        
+        .btn-ignore:hover {
+            background: #f8f9fa;
+        }
+        
+        /* 새로고침 버튼 상태 표시 */
+        .btn-refresh-all-groups {
+            transition: all 0.3s ease;
+        }
+        
+        .btn-refresh-all-groups:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        /* 그룹 상태 시각적 피드백 */
+        .firepower-groups .group-item.removed {
+            opacity: 0.5;
+            text-decoration: line-through;
+            color: #dc3545;
+        }
+        
+        .firepower-groups .group-item.new {
+            background: #d4edda;
+            border-left: 3px solid #28a745;
+            animation: highlightNew 2s ease-out;
+        }
+        
+        @keyframes highlightNew {
+            0% {
+                background: #28a745;
+                color: white;
+            }
+            100% {
+                background: #d4edda;
+                color: inherit;
+            }
+        }
+        
+        /* 동기화 상태 표시 */
+        .sync-status {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+        
+        .sync-status.syncing {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .sync-status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .sync-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+    <script>
+        // 로그인 상태 확인
+        async function checkAuth() {
+            try {
+                const response = await fetch('http://localhost:5000/api/auth/status', {
+                    credentials: 'include'
+                });
+                
+                const result = await response.json();
+                
+                if (!result.authenticated) {
+                    // 로그인 페이지로 리다이렉트
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                
+                // 사용자 정보 저장
+                window.userInfo = result.user;
+                return true;
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                window.location.href = 'login.html';
+                return false;
+            }
+        }
+        
+        // 페이지 로드 시 인증 확인
+        checkAuth();
+    </script>
+    <script src="config_client.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

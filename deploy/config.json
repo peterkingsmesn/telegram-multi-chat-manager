@@ -1,0 +1,25 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 5000,
+    "cors_enabled": true
+  },
+  "telegram": {
+    "api_configs": {},
+    "default_api": {
+      "api_id": null,
+      "api_hash": null
+    },
+    "sessions_dir": "sessions"
+  },
+  "proxies": {
+    "proxy_account_mapping": {},
+    "proxy_pool": {}
+  },
+  "app": {
+    "max_firepower_accounts": 30,
+    "message_send_delay": 800,
+    "auto_sync_interval": 300000,
+    "auto_sync_enabled": false
+  }
+}

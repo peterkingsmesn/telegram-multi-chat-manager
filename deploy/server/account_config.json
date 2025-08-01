@@ -1,0 +1,8 @@
+{
+  "predefined_accounts": {
+    "firepower": [],
+    "expert": []
+  },
+  "critical_accounts": [],
+  "special_debug_accounts": []
+}
