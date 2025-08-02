@@ -41,7 +41,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/peterkingsmen/telegram-multi-chat-manager.git"
+    "url": "https://github.com/peterkingsmesn/telegram-multi-chat-manager.git"
   },
   "build": {
     "appId": "com.yourcompany.telegram-manager",
@@ -98,7 +98,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "peterkingsmen",
+        "owner": "peterkingsmesn",
         "repo": "telegram-multi-chat-manager",
         "releaseType": "release"
       }

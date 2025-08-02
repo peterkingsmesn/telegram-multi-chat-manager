@@ -18,7 +18,7 @@ const setupAutoUpdater = (mainWindow) => {
   // 업데이트 서버 설정
   autoUpdater.setFeedURL({
     provider: 'github',
-    owner: 'peterkingsmen',
+    owner: 'peterkingsmesn',
     repo: 'telegram-multi-chat-manager',
     private: false,
     token: process.env.GH_TOKEN // GitHub 토큰 (private repo의 경우)
