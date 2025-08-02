@@ -19,7 +19,7 @@
 
 ## 설치 방법
 
-1. [Releases](https://github.com/yourusername/telegram-multi-chat-manager/releases) 페이지에서 최신 버전 다운로드
+1. [Releases](https://github.com/peterkingsmen/telegram-multi-chat-manager/releases) 페이지에서 최신 버전 다운로드
 2. `Telegram.Multi.Chat.Manager.Setup.exe` 실행
 3. 설치 마법사 따라 진행
 4. 설치 완료 후 앱 실행
@@ -57,4 +57,4 @@ npm run dist-win-simple
 
 ## 문의사항
 
-문제가 발생하거나 기능 요청이 있으시면 [Issues](https://github.com/yourusername/telegram-multi-chat-manager/issues) 페이지를 이용해주세요.
+문제가 발생하거나 기능 요청이 있으시면 [Issues](https://github.com/peterkingsmen/telegram-multi-chat-manager/issues) 페이지를 이용해주세요.
