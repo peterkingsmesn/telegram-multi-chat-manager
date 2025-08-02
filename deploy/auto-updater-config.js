@@ -63,11 +63,23 @@ const setupAutoUpdater = (mainWindow) => {
 
   autoUpdater.on('error', (err) => {
     log.error('업데이트 오류:', err);
+    log.error('상세 오류:', err.stack);
     
-    dialog.showErrorBox(
-      '업데이트 오류',
-      `업데이트 중 오류가 발생했습니다:\n${err.message}`
-    );
+    // 404 오류인 경우 더 자세한 정보 제공
+    if (err.message.includes('404')) {
+      dialog.showErrorBox(
+        '업데이트 오류',
+        `GitHub 릴리스를 찾을 수 없습니다.\n\n` +
+        `1. GitHub에 릴리스가 생성되었는지 확인하세요.\n` +
+        `2. https://github.com/peterkingsmesn/telegram-multi-chat-manager/releases\n\n` +
+        `오류: ${err.message}`
+      );
+    } else {
+      dialog.showErrorBox(
+        '업데이트 오류',
+        `업데이트 중 오류가 발생했습니다:\n${err.message}`
+      );
+    }
   });
 
   autoUpdater.on('download-progress', (progressObj) => {

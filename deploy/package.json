@@ -1,6 +1,6 @@
 {
   "name": "telegram-multi-chat-manager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "텔레그램 멀티 챗 매니저",
   "main": "main.js",
   "scripts": {
