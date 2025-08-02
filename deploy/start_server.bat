@@ -7,7 +7,7 @@ echo Telegram API Server Starting...
 echo ====================================
 echo.
 echo Config file: config.json
-echo Server: http://localhost:5000
+echo Server: http://localhost:5555
 echo.
 echo ====================================
 echo.

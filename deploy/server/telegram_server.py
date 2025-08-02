@@ -91,6 +91,23 @@ def health_check():
         'config_loaded': bool(config_manager.config)
     })
 
+@app.route('/config', methods=['GET'])
+def get_config():
+    """현재 설정 반환 (민감한 정보 제외)"""
+    config = config_manager.config
+    safe_config = {
+        'server': config.get('server', {}),
+        'telegram': {
+            'sessions_dir': config.get('telegram', {}).get('sessions_dir', 'sessions'),
+            'api_count': len(config.get('telegram', {}).get('api_configs', {}))
+        },
+        'proxies': {
+            'proxy_count': len(config.get('proxies', {}).get('proxy_pool', {})),
+            'mapping_count': len(config.get('proxies', {}).get('proxy_account_mapping', {}))
+        }
+    }
+    return jsonify(safe_config)
+
 @app.route('/api/config/status', methods=['GET'])
 def config_status():
     """설정 상태 확인"""
@@ -1046,7 +1063,7 @@ if __name__ == '__main__':
     
     # 서버 정보
     host = config_manager.get('server.host', '127.0.0.1')
-    port = config_manager.get('server.port', 5000)
+    port = config_manager.get('server.port', 5555)
     
     print("=" * 60)
     print("Telegram Multi-Account Manager Server")

@@ -2,7 +2,7 @@
 const ClientConfig = {
     // 서버 설정
     server: {
-        baseUrl: 'http://localhost:5000',
+        baseUrl: 'http://localhost:5555',
         timeout: 30000
     },
     

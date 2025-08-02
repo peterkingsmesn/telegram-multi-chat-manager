@@ -158,6 +158,10 @@
             line-height: 1.5;
         }
     </style>
+    <script src="config_client.js"></script>
+    <script>
+        const API_BASE = config.server.baseUrl || 'http://localhost:5555';
+    </script>
 </head>
 <body>
     <div class="login-container">
@@ -238,7 +242,7 @@
             loginBtn.innerHTML = '<span class="loading"></span> 인증 중...';
             
             try {
-                const response = await fetch('http://localhost:5000/api/auth/login', {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -289,7 +293,7 @@
         // 인증 상태 확인
         async function checkAuthStatus() {
             try {
-                const response = await fetch('http://localhost:5000/api/auth/status', {
+                const response = await fetch(`${API_BASE}/api/auth/status`, {
                     credentials: 'include'
                 });
                 

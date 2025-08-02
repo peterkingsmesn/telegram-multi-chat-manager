@@ -1,0 +1,99 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        cd deploy
+        npm install
+        
+    - name: Download Python embedded
+      run: |
+        cd deploy
+        python build-standalone.py
+        
+    - name: Build Electron app
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        cd deploy
+        npm run dist-win-simple
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: windows-installer
+        path: deploy/dist/*.exe
+        
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: windows-installer
+        path: dist
+        
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: |
+          # 텔레그램 멀티 챗 매니저 ${{ github.ref_name }}
+          
+          ## 주요 변경사항
+          - 포트 변경: 5000 → 5555
+          - 자동 업데이트 기능 추가
+          
+          ## 설치 방법
+          1. `Telegram.Multi.Chat.Manager.Setup.exe` 다운로드
+          2. 설치 프로그램 실행
+          3. 설치 완료 후 앱 실행
+          
+          ## 시스템 요구사항
+          - Windows 10/11 (64비트)
+          - Python 3.10+ (앱에 포함됨)
+        draft: false
+        prerelease: false
+        
+    - name: Upload Release Assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/Telegram Multi Chat Manager Setup 1.0.0.exe
+        asset_name: Telegram.Multi.Chat.Manager.Setup.exe
+        asset_content_type: application/octet-stream

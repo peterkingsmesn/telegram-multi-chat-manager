@@ -1,6 +1,6 @@
 // 설정 로드
 const config = typeof ClientConfig !== 'undefined' ? loadClientConfig() : {
-    server: { baseUrl: 'http://localhost:5000' },
+    server: { baseUrl: 'http://localhost:5555' },
     app: { maxFirepowerAccounts: 30, messageSpeed: { default: 800 } }
 };
 
@@ -18,7 +18,7 @@ async function apiRequest(url, options = {}) {
     };
     
     const response = await fetch(url, { ...defaultOptions, ...options });
-    const result = await response.json();
+    const result = response; // apiRequest already returns parsed JSON
     
     // 인증 오류 처리
     if (response.status === 401 || result.need_login) {
@@ -1065,7 +1065,7 @@ async function sendMessage() {
             
             for (const group of selectedGroups) {
                 try {
-                    const response = await fetch(`${API_BASE_URL}/send/images`, {
+                    const response = await apiRequest(`${API_BASE_URL}/send/images`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1081,7 +1081,7 @@ async function sendMessage() {
                         })
                     });
                     
-                    const result = await response.json();
+                    const result = response; // apiRequest already returns parsed JSON
                     if (result.success) {
                         totalSent++;
                         console.log(`Message with image sent to ${group.phone} - ${group.groupId}`);
@@ -1105,11 +1105,8 @@ async function sendMessage() {
                 console.log(`📤 Sending message to: ${group.phone} -> ${group.groupTitle} (ID: ${group.groupId})`);
                 
                 try {
-                    const response = await fetch(`${API_BASE_URL}/send/message`, {
+                    const result = await apiRequest(`${API_BASE_URL}/send/message`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
                         body: JSON.stringify({
                             phone: group.phone,
                             group_ids: [group.groupId],
@@ -1117,7 +1114,7 @@ async function sendMessage() {
                         })
                     });
                     
-                    const result = await response.json();
+                    const result = response; // apiRequest already returns parsed JSON
                     if (result.success) {
                         totalSent++;
                         console.log(`✅ Message sent successfully to ${group.phone} -> ${group.groupTitle}`);
@@ -1525,8 +1522,8 @@ async function loadAccountsFromServer() {
         console.log('🔄 서버와 계정 동기화 시작...');
         
         // 1. 서버에서 로그인된 계정 목록 가져오기
-        const response = await fetch(`${API_BASE_URL}/get-logged-accounts`);
-        const data = await response.json();
+        const result = await apiRequest(`${API_BASE_URL}/get-logged-accounts`);
+        const data = response; // apiRequest already returns parsed JSON
         
         if (!data.success) {
             console.error('❌ 서버에서 계정 정보를 가져올 수 없습니다:', data.error);
@@ -1555,13 +1552,13 @@ async function loadAccountsFromServer() {
             
             try {
                 // 4. 각 계정의 그룹 목록 가져오기
-                const groupResponse = await fetch(`${API_BASE_URL}/groups`, {
+                const groupResponse = await apiRequest(`${API_BASE_URL}/groups`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ phone: account.phone })
                 });
                 
-                const groupData = await groupResponse.json();
+                const groupData = groupResponse; // apiRequest already returns parsed JSON
                 const groups = groupData.success ? groupData.groups : [];
                 
                 const accountInfo = {
@@ -1686,8 +1683,7 @@ async function reconnectMissingAccounts() {
         console.log('🔄 Critical accounts reconnection check...');
         
         // 현재 로그인된 계정 목록 가져오기
-        const loggedResponse = await fetch(`${API_BASE_URL}/get-logged-accounts`);
-        const loggedData = await loggedResponse.json();
+        const loggedData = await apiRequest(`${API_BASE_URL}/get-logged-accounts`);
         
         const loggedPhones = loggedData.success ? loggedData.accounts.map(acc => acc.phone) : [];
         
@@ -1707,7 +1703,7 @@ async function reconnectMissingAccounts() {
             
             try {
                 // connect API 호출 (세션이 있으면 자동 로그인)
-                const connectResponse = await fetch(`${API_BASE_URL}/connect`, {
+                const connectResponse = await apiRequest(`${API_BASE_URL}/connect`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1717,14 +1713,14 @@ async function reconnectMissingAccounts() {
                     })
                 });
                 
-                const connectResult = await connectResponse.json();
+                const connectResult = connectResponse; // apiRequest already returns parsed JSON
                 
                 if (connectResult.success) {
                     console.log(`✅ Reconnected ${phone} successfully`);
                     
                     // 연결 후 그룹 목록 가져와서 복원
                     try {
-                        const groupResponse = await fetch(`${API_BASE_URL}/groups`, {
+                        const groupResponse = await apiRequest(`${API_BASE_URL}/groups`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1734,7 +1730,7 @@ async function reconnectMissingAccounts() {
                             })
                         });
                         
-                        const groupData = await groupResponse.json();
+                        const groupData = groupResponse; // apiRequest already returns parsed JSON
                         
                         if (groupData.success && groupData.groups && groupData.groups.length > 0) {
                             console.log(`📋 Restored ${groupData.groups.length} groups for ${phone}`);
@@ -1994,13 +1990,12 @@ async function refreshExpertGroups(index) {
     console.log(`🔄 전문가 ${index} (${room.phone}) 그룹 새로고침 시작`);
     
     try {
-        const response = await fetch(`${API_BASE_URL}/groups`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ phone: room.phone })
-        });
+        const result = await apiRequest(`${API_BASE_URL}/groups`, {
+                        method: 'POST',
+                        body: JSON.stringify({ phone: room.phone })
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         console.log(`📊 ${room.phone} 그룹 응답:`, data);
         
         // 🔍 DEBUGGING: 각 그룹의 title 값 상세 확인
@@ -2054,13 +2049,12 @@ async function refreshExpertGroups(index) {
 // 전문가 연결 테스트
 async function testExpertConnection(phone) {
     try {
-        const response = await fetch(`${API_BASE_URL}/test-connection`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ phone })
-        });
+        const result = await apiRequest(`${API_BASE_URL}/test-connection`, {
+                        method: 'POST',
+                        body: JSON.stringify({ phone })
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success && data.connected) {
             alert(`연결 성공!\n사용자: ${data.user.first_name}\n전화번호: ${data.user.phone}`);
@@ -2287,7 +2281,7 @@ async function sendBroadcast() {
                 }
                 
                 try {
-                    const response = await fetch(`${API_BASE_URL}/send/images`, {
+                    const response = await apiRequest(`${API_BASE_URL}/send/images`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2303,7 +2297,7 @@ async function sendBroadcast() {
                         })
                     });
                     
-                    const result = await response.json();
+                    const result = response; // apiRequest already returns parsed JSON
                     if (result.success) {
                         totalSent += account.groupIds.length;
                         console.log(`Sent to ${account.phone}: ${result.message}`);
@@ -2329,11 +2323,8 @@ async function sendBroadcast() {
                 }
                 
                 try {
-                    const response = await fetch(`${API_BASE_URL}/send/message`, {
+                    const result = await apiRequest(`${API_BASE_URL}/send/message`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
                         body: JSON.stringify({
                             phone: account.phone,
                             group_ids: account.groupIds,
@@ -2341,7 +2332,7 @@ async function sendBroadcast() {
                         })
                     });
                     
-                    const result = await response.json();
+                    const result = response; // apiRequest already returns parsed JSON
                     if (result.success) {
                         totalSent += account.groupIds.length;
                         console.log(`Sent to ${account.phone}: ${result.message}`);
@@ -2552,15 +2543,12 @@ async function connectTelegramAPI() {
     showConnectionStatus('연결 중...', 'info');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/connect`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ phone })
-        });
+        const result = await apiRequest(`${API_BASE_URL}/connect`, {
+                        method: 'POST',
+                        body: JSON.stringify({ phone })
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             if (data.require_code) {
@@ -2601,18 +2589,15 @@ async function verifyTelegramCode() {
     showConnectionStatus('인증 확인 중...', 'info');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/verify`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
+        const result = await apiRequest(`${API_BASE_URL}/verify`, {
+                        method: 'POST',
+                        body: JSON.stringify({ 
                 phone: appState.currentPhone,
                 code 
             })
-        });
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             showConnectionStatus(`로그인 성공! 사용자: ${data.user.first_name}`, 'success');
@@ -2679,18 +2664,15 @@ async function verifyTelegramPassword() {
     showConnectionStatus('2FA 인증 중...', 'info');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/verify-password`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
+        const result = await apiRequest(`${API_BASE_URL}/verify-password`, {
+                        method: 'POST',
+                        body: JSON.stringify({ 
                 phone: appState.currentPhone,
                 password 
             })
-        });
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             showConnectionStatus(`2FA 인증 성공! 사용자: ${data.user.first_name}`, 'success');
@@ -2720,17 +2702,14 @@ async function testTelegramConnection() {
     showConnectionStatus('연결 테스트 중...', 'info');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/test-connection`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
+        const result = await apiRequest(`${API_BASE_URL}/test-connection`, {
+                        method: 'POST',
+                        body: JSON.stringify({ 
                 phone: appState.currentPhone || elements.expertPhoneInput.value
             })
-        });
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success && data.connected) {
             showConnectionStatus(`연결됨 - ${data.user.first_name} (${data.user.username || data.user.phone})`, 'success');
@@ -2746,17 +2725,14 @@ async function loadTelegramGroups() {
     showConnectionStatus('그룹 목록을 불러오는 중...', 'info');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/groups`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
+        const result = await apiRequest(`${API_BASE_URL}/groups`, {
+                        method: 'POST',
+                        body: JSON.stringify({ 
                 phone: appState.currentPhone || elements.expertPhoneInput.value
             })
-        });
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             showConnectionStatus(`${data.groups.length}개의 그룹을 찾았습니다`, 'success');
@@ -2893,17 +2869,14 @@ async function loadGroupsForFirepower(firepower) {
     try {
         console.log(`🔄 화력 ${firepower} 그룹 새로고침 시작: ${room.phone}`);
         
-        const response = await fetch(`${API_BASE_URL}/groups`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
+        const result = await apiRequest(`${API_BASE_URL}/groups`, {
+                        method: 'POST',
+                        body: JSON.stringify({ 
                 phone: room.phone
             })
-        });
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             console.log(`📊 화력 ${firepower} 그룹 동기화 분석: ${room.phone} - ${data.groups.length}개 그룹 발견`);
@@ -3115,15 +3088,12 @@ async function requestExpertAppAuth() {
     showConnectionStatus('텔레그램 앱으로 인증코드 요청 중...', 'info');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/app-auth-request`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ phone })
-        });
+        const result = await apiRequest(`${API_BASE_URL}/app-auth-request`, {
+                        method: 'POST',
+                        body: JSON.stringify({ phone })
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             elements.verificationSection.style.display = 'block';
@@ -3149,15 +3119,12 @@ async function requestAppAuth(firepower) {
     showFirepowerConnectionStatus('텔레그램 앱으로 인증코드 요청 중...', 'info');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/app-auth-request`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ phone })
-        });
+        const result = await apiRequest(`${API_BASE_URL}/app-auth-request`, {
+                        method: 'POST',
+                        body: JSON.stringify({ phone })
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             document.getElementById('firepowerVerificationSection').style.display = 'block';
@@ -3231,15 +3198,12 @@ async function connectFirepowerAPI(firepower) {
     showFirepowerConnectionStatus('연결 중...', 'info');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/connect`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ phone })
-        });
+        const result = await apiRequest(`${API_BASE_URL}/connect`, {
+                        method: 'POST',
+                        body: JSON.stringify({ phone })
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             if (data.require_code) {
@@ -3294,15 +3258,12 @@ async function verifyFirepowerCode(firepower) {
     showFirepowerConnectionStatus('인증 확인 중...', 'info');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/verify`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ phone, code })
-        });
+        const result = await apiRequest(`${API_BASE_URL}/verify`, {
+                        method: 'POST',
+                        body: JSON.stringify({ phone, code })
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             // 화력별 정보 저장
@@ -3387,13 +3348,13 @@ async function deleteFirepowerApi(firepower) {
     if (confirm(`화력 ${firepower}의 API 연결을 삭제하시겠습니까?\n연결된 계정: ${room.user?.first_name || room.phone}\n\n⚠️ 서버에서도 완전히 삭제됩니다.`)) {
         try {
             // 서버에서 API 삭제
-            const response = await fetch('/api/delete-user-api', {
+            const response = await apiRequest('/api/delete-user-api', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone: room.phone })
             });
             
-            const result = await response.json();
+            const result = response; // apiRequest already returns parsed JSON
             
             if (result.success) {
                 // 로컬 정보 삭제
@@ -3468,15 +3429,12 @@ async function verifyFirepowerPassword(firepower) {
     showFirepowerConnectionStatus('2FA 인증 중...', 'info');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/verify-password`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ phone, password })
-        });
+        const result = await apiRequest(`${API_BASE_URL}/verify-password`, {
+                        method: 'POST',
+                        body: JSON.stringify({ phone, password })
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             // 화력별 정보 저장
@@ -3577,19 +3535,16 @@ async function sendSelectedTemplate(roomId) {
     }
     
     try {
-        const response = await fetch(`${API_BASE_URL}/send/message`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+        const result = await apiRequest(`${API_BASE_URL}/send/message`, {
+                        method: 'POST',
+                        body: JSON.stringify({
                 phone: appState.currentPhone,
                 group_ids: [room.groupId],
                 message: message
             })
-        });
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             alert('메시지가 전송되었습니다!');
@@ -3660,19 +3615,16 @@ async function sendTemplateToFirepower(templateIndex) {
         const groupIds = target.groups.map(g => g.id);
         
         try {
-            const response = await fetch(`${API_BASE_URL}/send/message`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
+            const result = await apiRequest(`${API_BASE_URL}/send/message`, {
+                        method: 'POST',
+                        body: JSON.stringify({
                     phone: target.phone,
                     group_ids: groupIds,
                     message: message
                 })
-            });
+                    });
             
-            const data = await response.json();
+            const data = response; // apiRequest already returns parsed JSON
             
             if (data.success) {
                 successCount += groupIds.length;
@@ -3829,8 +3781,8 @@ let AUTO_SETUP_PHONES = [];
 // 서버에서 자동 설정 전화번호 가져오기
 async function loadAutoSetupPhones() {
     try {
-        const response = await fetch(`${API_BASE_URL}/accounts/auto-setup`);
-        const result = await response.json();
+        const result = await apiRequest(`${API_BASE_URL}/accounts/auto-setup`);
+        const result = response; // apiRequest already returns parsed JSON
         if (result.success) {
             AUTO_SETUP_PHONES = result.phones || [];
             console.log('📱 자동 설정 전화번호 로드:', AUTO_SETUP_PHONES.length);
@@ -3844,8 +3796,8 @@ async function loadAutoSetupPhones() {
 // 서버에서 중요 계정 목록 가져오기
 async function getCriticalAccounts() {
     try {
-        const response = await fetch(`${API_BASE_URL}/accounts/critical`);
-        const result = await response.json();
+        const result = await apiRequest(`${API_BASE_URL}/accounts/critical`);
+        const result = response; // apiRequest already returns parsed JSON
         if (result.success) {
             return result.accounts || [];
         }
@@ -3872,12 +3824,12 @@ async function startAutoSetup() {
         
         try {
             const response = await Promise.race([
-                fetch(`${API_BASE_URL}/get-logged-accounts`),
+                apiRequest(`${API_BASE_URL}/get-logged-accounts`),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
             ]);
             
             if (response.ok) {
-                const data = await response.json();
+                const data = response; // apiRequest already returns parsed JSON
                 if (data.success && data.accounts && data.accounts.length > 0) {
                     loggedAccounts = data.accounts.filter(acc => acc.status === 'logged_in');
                     console.log(`서버에서 ${loggedAccounts.length}개 로그인된 계정 발견`);
@@ -3914,7 +3866,7 @@ async function startAutoSetup() {
             
             // 그룹 정보 가져오기
             try {
-                const groupResponse = await fetch(`${API_BASE_URL}/groups`, {
+                const groupResponse = await apiRequest(`${API_BASE_URL}/groups`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -3923,7 +3875,7 @@ async function startAutoSetup() {
                         phone: account.phone
                     })
                 });
-                const groupData = await groupResponse.json();
+                const groupData = groupResponse; // apiRequest already returns parsed JSON
                 
                 const groups = groupData.success ? groupData.groups : [];
                 
@@ -4103,13 +4055,12 @@ function showAutoSetupModal(firepower, phone) {
 // 자동 연결
 async function autoConnectPhone(phone) {
     try {
-        const response = await fetch(`${API_BASE_URL}/connect`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ phone })
-        });
+        const result = await apiRequest(`${API_BASE_URL}/connect`, {
+                        method: 'POST',
+                        body: JSON.stringify({ phone })
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             if (data.require_code) {
@@ -4143,13 +4094,12 @@ async function autoVerifyCode() {
     document.getElementById('autoSetupStatus').textContent = '인증 확인 중...';
     
     try {
-        const response = await fetch(`${API_BASE_URL}/verify`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ phone: autoSetupState.currentPhone, code })
-        });
+        const result = await apiRequest(`${API_BASE_URL}/verify`, {
+                        method: 'POST',
+                        body: JSON.stringify({ phone: autoSetupState.currentPhone, code })
+                    });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             document.getElementById('autoSetupStatus').textContent = '인증 성공!';
@@ -4533,7 +4483,7 @@ async function sendProfitVerificationAuto(capacity) {
                 console.log(`📱 [${i+1}/${targetAccounts.length}] ${account.phone}: 용량 ${capacity} 이미지 ${imageIndex + 1}번 선택`);
                 console.log(`   └─ 화력: ${account.firepower}번, 총 사용된 이미지: ${totalUsed}개`);
                 
-                const response = await fetch(`${API_BASE_URL}/send/images`, {
+                const response = await apiRequest(`${API_BASE_URL}/send/images`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -4549,7 +4499,7 @@ async function sendProfitVerificationAuto(capacity) {
                     })
                 });
                 
-                const result = await response.json();
+                const result = response; // apiRequest already returns parsed JSON
                 if (result.success) {
                     successCount++;
                     console.log(`✅ 수익인증 전송 완료: ${account.phone} → 용량 ${capacity} 이미지 ${imageIndex + 1}번`);
@@ -4814,16 +4764,15 @@ async function sendProfitVerification() {
                     });
                 }));
                 
-                const response = await fetch(`${API_BASE_URL}/send/images`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
+                const result = await apiRequest(`${API_BASE_URL}/send/images`, {
+                        method: 'POST',
+                        body: JSON.stringify({
                         phone: phone,
                         group_ids: groupIds,
                         message: message || '📈 수익인증',
                         images: imageData
                     })
-                });
+                    });
                 
                 if (response.ok) {
                     successCount++;
@@ -5045,7 +4994,7 @@ async function refreshAllAccountGroups() {
         let serverAvailable = false;
         try {
             const testResponse = await Promise.race([
-                fetch(`${API_BASE_URL}/proxy-status`),
+                apiRequest(`${API_BASE_URL}/proxy-status`),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
             ]);
             serverAvailable = testResponse.ok;
@@ -5107,7 +5056,7 @@ async function autoConnectAccount(phone) {
         console.log(`Attempting auto-connection for ${phone}...`);
         
         // 1. 연결 시도
-        const connectResponse = await fetch(`${API_BASE_URL}/connect`, {
+        const connectResponse = await apiRequest(`${API_BASE_URL}/connect`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone: phone })
@@ -5118,7 +5067,7 @@ async function autoConnectAccount(phone) {
             return false;
         }
         
-        const connectResult = await connectResponse.json();
+        const connectResult = connectResponse; // apiRequest already returns parsed JSON
         
         if (connectResult.success) {
             if (connectResult.already_authorized) {
@@ -5145,7 +5094,7 @@ async function refreshAccountGroups(phone, type, index) {
         
         // 3초 타임아웃 적용
         const response = await Promise.race([
-            fetch(`${API_BASE_URL}/get-groups`, {
+            apiRequest(`${API_BASE_URL}/get-groups`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone: phone })
@@ -5179,7 +5128,7 @@ async function refreshAccountGroups(phone, type, index) {
             return;
         }
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success && data.groups) {
             console.log(`📊 그룹 동기화 분석: ${phone} - ${data.groups.length}개 그룹 발견`);
@@ -5501,7 +5450,7 @@ async function registerUserAPI() {
     showRegistrationStatus('API 등록을 진행하고 있습니다...', 'info');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/register-user-api`, {
+        const response = await apiRequest(`${API_BASE_URL}/register-user-api`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -5513,7 +5462,7 @@ async function registerUserAPI() {
             })
         });
         
-        const data = await response.json();
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             if (data.updated) {
@@ -5559,8 +5508,8 @@ function clearRegistrationModal() {
 
 async function loadRegisteredAPIs() {
     try {
-        const response = await fetch(`${API_BASE_URL}/get-registered-apis`);
-        const data = await response.json();
+        const result = await apiRequest(`${API_BASE_URL}/get-registered-apis`);
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             console.log('Registered APIs:', data.apis);
@@ -6067,8 +6016,7 @@ function checkServerSync() {
     const localPhones = masterAccounts.map(acc => normalizePhone(acc.phone));
     
     // 서버에서 계정 목록 가져오기 (비동기)
-    fetch(`${API_BASE_URL}/get-logged-accounts`)
-        .then(response => response.json())
+    apiRequest(`${API_BASE_URL}/get-logged-accounts`)
         .then(data => {
             if (data.success) {
                 const serverPhones = data.accounts.map(acc => normalizePhone(acc.phone));
@@ -6604,8 +6552,8 @@ function redistributeAllAccounts() {
 async function debugLoggedAccounts() {
     try {
         console.log('🔍 서버에서 로그인된 계정 확인 중...');
-        const response = await fetch(`${API_BASE_URL}/get-logged-accounts`);
-        const data = await response.json();
+        const result = await apiRequest(`${API_BASE_URL}/get-logged-accounts`);
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             console.log('📊 서버 로그인 계정 상태:');
@@ -6857,8 +6805,8 @@ function switchApiTab(tabName) {
 // 서버에서 API 설정 로드
 async function loadApiConfigs() {
     try {
-        const response = await fetch(`${API_BASE_URL}/get-api-configs`);
-        const data = await response.json();
+        const result = await apiRequest(`${API_BASE_URL}/get-api-configs`);
+        const data = response; // apiRequest already returns parsed JSON
         
         if (data.success) {
             renderApiList('expert', data.configs.expert || []);
@@ -6986,13 +6934,13 @@ async function deleteApiConfig(type, index) {
     if (confirm(`이 ${type === 'expert' ? '전문가' : '화력'} API를 삭제하시겠습니까?\n계정: ${apiConfig.phone}\n\n⚠️ 서버에서도 완전히 삭제됩니다.`)) {
         try {
             // 서버에서 API 삭제
-            const response = await fetch('/api/delete-user-api', {
+            const response = await apiRequest('/api/delete-user-api', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone: apiConfig.phone })
             });
             
-            const result = await response.json();
+            const result = response; // apiRequest already returns parsed JSON
             
             if (result.success) {
                 // 로컬에서도 삭제
@@ -7056,15 +7004,12 @@ async function saveApiEdit() {
     
     try {
         // 서버에 API 설정 저장 요청
-        const response = await fetch(`${API_BASE_URL}/save-api-config`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(config)
-        });
+        const result = await apiRequest(`${API_BASE_URL}/save-api-config`, {
+                        method: 'POST',
+                        body: JSON.stringify(config)
+                    });
         
-        const result = await response.json();
+        const result = response; // apiRequest already returns parsed JSON
         
         if (result.success) {
             alert('API 설정이 저장되었습니다.');

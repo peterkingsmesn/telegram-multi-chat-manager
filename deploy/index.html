@@ -917,11 +917,14 @@
             color: #721c24;
         }
     </style>
+    <script src="config_client.js"></script>
     <script>
+        const API_BASE = config.server.baseUrl || 'http://localhost:5555';
+        
         // 로그인 상태 확인
         async function checkAuth() {
             try {
-                const response = await fetch('http://localhost:5000/api/auth/status', {
+                const response = await fetch(`${API_BASE}/api/auth/status`, {
                     credentials: 'include'
                 });
                 
@@ -947,6 +950,7 @@
         checkAuth();
     </script>
     <script src="config_client.js"></script>
+    <script src="electron-config.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
